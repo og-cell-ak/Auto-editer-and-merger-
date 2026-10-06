@@ -21,6 +21,9 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
   val id=inputData.getString(KEY_PROJECT_ID)?:return Result.failure(workDataOf(KEY_ERROR to "missing_project_id"))
   val store=ProjectStore(applicationContext)
   val p=store.list().firstOrNull{it.id==id}?:return Result.failure(workDataOf(KEY_ERROR to "merge_project_not_found"))
+  if(p.state=="PAUSED"||p.state=="CANCELLED") return Result.success(workDataOf(KEY_SKIPPED to true))
+  val next=store.list().filter{it.state=="QUEUED"}.minByOrNull{it.queueRank}
+  if(next!=null&&next.id!=p.id) return Result.success(workDataOf(KEY_SKIPPED to true))
 
   fun stage(n:Int,s:String){
    p.progress=n;p.progressStage=s;p.state=if(n>=100)"READY" else "MERGING"
@@ -125,6 +128,6 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
 
  companion object{
   const val KEY_PROJECT_ID="project_id";const val KEY_PROGRESS="progress";const val KEY_STAGE="stage"
-  const val KEY_ERROR="error";const val KEY_RESULT_STATE="result_state"
+  const val KEY_ERROR="error";const val KEY_RESULT_STATE="result_state";const val KEY_SKIPPED="skipped"
  }
 }
