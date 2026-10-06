@@ -118,10 +118,10 @@ assert "showbackgroundpermissionnotice" not in (java_root / "com/futurethinking/
 assert "first project" in store and "tenth project" in store
 assert "migrategenericprojectnames" in store
 assert "result.retry()" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text().lower()
-assert "work-multiprocess:2.12.0" in (root / "app/build.gradle.kts").read_text().lower()
-assert "remoteworkerservice" in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
-assert 'android:process=":media"' in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
-assert "remotelistenabledelegatingworker" in (java_root / "com/futurethinking/aivideodirector/ui/MainViewModel.kt").read_text().lower()
+assert "work-multiprocess" not in (root / "app/build.gradle.kts").read_text().lower()
+assert "remoteworkerservice" not in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
+assert 'android:process=":media"' not in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
+assert "remotelistenabledelegatingworker" not in (java_root / "com/futurethinking/aivideodirector/ui/MainViewModel.kt").read_text().lower()
 assert "first project" in store and "tenth project" in store
 assert "workmanager.getinstance" in (java_root / "com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt").read_text().lower()
 assert "runCatching" in (java_root / "com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt").read_text()

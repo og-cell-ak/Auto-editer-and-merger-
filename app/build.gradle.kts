@@ -65,7 +65,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.work:work-runtime-ktx:2.12.0")
-    implementation("androidx.work:work-multiprocess:2.12.0")
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
     implementation("androidx.compose.ui:ui")

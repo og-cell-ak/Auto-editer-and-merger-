@@ -6,7 +6,6 @@ import androidx.core.app.NotificationCompat
 import androidx.media3.common.*
 import androidx.media3.transformer.*
 import androidx.work.*
-import androidx.work.multiprocess.RemoteCoroutineWorker
 import com.futurethinking.aivideodirector.data.ProjectStore
 import com.futurethinking.aivideodirector.media.MediaExportGate
 import com.futurethinking.aivideodirector.pipeline.QualityControl
@@ -17,8 +16,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import org.json.JSONArray
 
-class MergeWorker(appContext:android.content.Context,params:WorkerParameters):RemoteCoroutineWorker(appContext,params){
- override suspend fun doRemoteWork():Result{
+class MergeWorker(appContext:android.content.Context,params:WorkerParameters):CoroutineWorker(appContext,params){
+ override suspend fun doWork():Result{
   val id=inputData.getString(KEY_PROJECT_ID)?:return Result.failure(workDataOf(KEY_ERROR to "missing_project_id"))
   val store=ProjectStore(applicationContext)
   val p=store.list().firstOrNull{it.id==id}?:return Result.failure(workDataOf(KEY_ERROR to "merge_project_not_found"))
@@ -38,7 +37,7 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Re
   }
 
   return try{
-   setForegroundAsync(foreground("Preparing merge",1)).get()
+   setForeground(foreground("Preparing merge",1))
    stage(5,"Preparing merge")
    val raw=JSONArray(p.mergeItemsJson?:"[]")
    val paths=mutableListOf<String>()

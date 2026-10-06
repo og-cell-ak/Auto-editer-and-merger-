@@ -12,7 +12,6 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import androidx.work.Data
 import androidx.work.workDataOf
 import com.futurethinking.aivideodirector.data.Project
 import com.futurethinking.aivideodirector.data.ProjectStore
@@ -20,9 +19,6 @@ import com.futurethinking.aivideodirector.pipeline.PdfTimestampScriptReader
 import com.futurethinking.aivideodirector.pipeline.TimestampScriptParser
 import com.futurethinking.aivideodirector.work.GenerationWorker
 import com.futurethinking.aivideodirector.work.MergeWorker
-import androidx.work.multiprocess.RemoteListenableDelegatingWorker
-import androidx.work.multiprocess.RemoteListenableWorker
-import androidx.work.multiprocess.RemoteWorkerService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -132,13 +128,8 @@ class MainViewModel(app:Application):AndroidViewModel(app){
    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,10,TimeUnit.SECONDS).build()
 
  private fun mergeRequest(p:Project):OneTimeWorkRequest=
-  OneTimeWorkRequestBuilder<RemoteListenableDelegatingWorker>()
-   .setInputData(Data.Builder()
-    .putString(RemoteListenableWorker.ARGUMENT_PACKAGE_NAME,getApplication<Application>().packageName)
-    .putString(RemoteListenableWorker.ARGUMENT_CLASS_NAME,RemoteWorkerService::class.java.name)
-    .putString(RemoteListenableDelegatingWorker.ARGUMENT_REMOTE_LISTENABLE_WORKER_NAME,MergeWorker::class.java.name)
-    .putString(MergeWorker.KEY_PROJECT_ID,p.id)
-    .build())
+  OneTimeWorkRequestBuilder<MergeWorker>()
+   .setInputData(workDataOf(MergeWorker.KEY_PROJECT_ID to p.id))
    .addTag(MERGE_TAG)
    .setConstraints(storageConstraints())
    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,10,TimeUnit.SECONDS).build()
