@@ -39,33 +39,27 @@ for p in java_root.rglob("*.kt"):
 main = (java_root / "com/futurethinking/aivideodirector/MainActivity.kt").read_text().lower()
 vm = (java_root / "com/futurethinking/aivideodirector/ui/MainViewModel.kt").read_text().lower()
 worker = (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.kt").read_text().lower()
+merge = (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text().lower()
+recovery = (java_root / "com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt").read_text().lower()
 planner = (java_root / "com/futurethinking/aivideodirector/pipeline/TimestampScenePlanner.kt").read_text()
 extractor = (java_root / "com/futurethinking/aivideodirector/media/PdfVisualExtractor.kt").read_text()
 renderer = (java_root / "com/futurethinking/aivideodirector/media/VideoRenderer.kt").read_text()
 store = (java_root / "com/futurethinking/aivideodirector/data/ProjectStore.kt").read_text().lower()
-vm = (java_root / "com/futurethinking/aivideodirector/ui/MainViewModel.kt").read_text().lower()
+manifest = (root / "app/src/main/AndroidManifest.xml").read_text().lower()
+gradle = (root / "app/build.gradle.kts").read_text().lower()
 
 assert "opendocument" in main and "importpdf" in vm and "importtimestamppdf" in vm and "importaudio" in vm
 assert "paste your timestamped script" not in main
 assert "pdftimestampscriptreader" in worker
 for forbidden in [
-    "imagepicker",
-    "image picker",
-    "gallery import",
-    "importimages",
-    "importtranscript",
-    "transcriptpicker",
-    "transcript panel",
-    "transcript screen",
+    "imagepicker","image picker","gallery import","importimages",
+    "importtranscript","transcriptpicker","transcript panel","transcript screen",
 ]:
     assert forbidden not in all_source.lower()
 
 for forbidden in [
-    "aivideodirector().plan",
-    "imageanalyzer",
-    "audioanalyzer",
-    "audioalignmentengine",
-    "visual-analysis-cache",
+    "aivideodirector().plan","imageanalyzer","audioanalyzer",
+    "audioalignmentengine","visual-analysis-cache",
 ]:
     assert forbidden not in worker
 
@@ -83,7 +77,14 @@ assert "append_or_replace" in vm
 assert "queue_version" in vm
 assert "key_result_state" in worker
 assert 'key_result_state to "error"' in worker
-assert 'android:label="editor and merger"' in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
+assert 'android:label="editor and merger"' in manifest
+
+# Merge stability: use Media3 Transformer only. No raw MediaMuxer shortcut.
+assert "fastmp4concatenator" not in all_source.lower()
+assert "mediamuxer" not in all_source.lower()
+assert "awaitExport" in merge
+assert "mediaexportgate.withlock" in merge
+assert "result.retry()" in merge
 
 print("VALIDATION_OK")
 
@@ -93,10 +94,9 @@ assert "progressstage" in store
 assert "setrequiresstoragenotlow" in vm
 assert "mediaexportgate" in (java_root / "com/futurethinking/aivideodirector/media/MediaExportGate.kt").read_text().lower()
 assert "mediaexportgate.withlock" in renderer.lower()
-assert "mediaexportgate.withlock" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text().lower()
-assert "inspectrenderedfile" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text().lower()
-assert "queuerecoveryreceiver" in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
-assert "receive_boot_completed" in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
+assert "inspectrenderedfile" in merge
+assert "queuerecoveryreceiver" in manifest
+assert "receive_boot_completed" in manifest
 assert "editor and merger" in (root / "app/src/main/res/values/strings.xml").read_text().lower()
 assert "mincoverage = 0.55f" in extractor.lower()
 assert "r >= 170" in extractor.lower() and "g >= 125" in extractor.lower() and "b <= 155" in extractor.lower()
@@ -111,17 +111,17 @@ assert "queuerank" in store
 assert "rendernow" in vm and "moveup" in vm and "movedown" in vm
 assert "togglepause" in vm and "cancelproject" in vm
 assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.kt").read_text()
-assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text()
-assert "post_notifications" in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
+assert "KEY_SKIPPED" in merge
+assert "post_notifications" in manifest
 assert "requestpermission" not in main
-assert "showbackgroundpermissionnotice" not in (java_root / "com/futurethinking/aivideodirector/ui/MainViewModel.kt").read_text().lower()
+assert "showbackgroundpermissionnotice" not in vm
 assert "first project" in store and "tenth project" in store
 assert "migrategenericprojectnames" in store
-assert "result.retry()" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text().lower()
-assert "work-multiprocess" not in (root / "app/build.gradle.kts").read_text().lower()
-assert "remoteworkerservice" not in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
-assert 'android:process=":media"' not in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
-assert "remotelistenabledelegatingworker" not in (java_root / "com/futurethinking/aivideodirector/ui/MainViewModel.kt").read_text().lower()
-assert "first project" in store and "tenth project" in store
-assert "workmanager.getinstance" in (java_root / "com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt").read_text().lower()
-assert "runCatching" in (java_root / "com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt").read_text()
+assert "work-multiprocess" not in gradle
+assert "remoteworkerservice" not in manifest
+assert 'android:process=":media"' not in manifest
+assert "remotelistenabledelegatingworker" not in vm
+assert "workmanager.getinstance" in recovery
+assert "runcatching" in recovery
+assert "merging" in recovery
+assert 'queue_version=5' in vm or 'queue_version=5' in vm
