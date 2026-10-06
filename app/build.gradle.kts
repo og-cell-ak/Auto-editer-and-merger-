@@ -10,7 +10,7 @@ android {
     defaultConfig {
         applicationId = "com.futurethinking.mobileautomation.final20261002"
         minSdk = 23
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
     }
