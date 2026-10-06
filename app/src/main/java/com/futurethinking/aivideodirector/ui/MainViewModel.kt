@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit
 
 class MainViewModel(app:Application):AndroidViewModel(app){
  private val store=ProjectStore(app)
- private val wm=WorkManager.getInstance(app)
+ private fun workManager():WorkManager?=runCatching{WorkManager.getInstance(getApplication())}.getOrNull()
  private val _projects=MutableStateFlow(store.list())
  val projects=_projects.asStateFlow()
  private val _current=MutableStateFlow<Project?>(null)
@@ -41,8 +41,20 @@ class MainViewModel(app:Application):AndroidViewModel(app){
  private val reconcileMutex=Mutex()
 
  init{
-  viewModelScope.launch{
-   wm.getWorkInfosForUniqueWorkFlow(MEDIA_QUEUE_NAME).collectLatest{info->refresh();if(info.none{!it.state.isFinished})reconcileQueue()}
+  viewModelScope.launch(Dispatchers.IO){
+   val manager=workManager()
+   if(manager==null){
+    _error.value="Background queue recovery is temporarily unavailable. The editor itself is still available."
+    return@launch
+   }
+   runCatching{
+    manager.getWorkInfosForUniqueWorkFlow(MEDIA_QUEUE_NAME).collectLatest{info->
+     refresh()
+     if(info.none{!it.state.isFinished})reconcileQueue()
+    }
+   }.onFailure{
+    _error.value="Background queue recovery stopped safely: "+(it.message?:it.javaClass.simpleName)
+   }
   }
   reconcileQueue()
  }
@@ -125,7 +137,12 @@ class MainViewModel(app:Application):AndroidViewModel(app){
  private fun storageConstraints()=Constraints.Builder().setRequiresStorageNotLow(true).build()
 
  private fun enqueueMediaWork(req:OneTimeWorkRequest){
-  wm.beginUniqueWork(MEDIA_QUEUE_NAME,ExistingWorkPolicy.APPEND_OR_REPLACE,req).enqueue()
+  val manager=workManager() ?: run {
+   _error.value="Background rendering service is unavailable. Please reopen the app and try again."
+   return
+  }
+  runCatching{manager.beginUniqueWork(MEDIA_QUEUE_NAME,ExistingWorkPolicy.APPEND_OR_REPLACE,req).enqueue()}
+   .onFailure{_error.value="Could not start background rendering: "+(it.message?:it.javaClass.simpleName)}
  }
 
  private fun isPendingState(s:String)=s=="QUEUED"||s=="ANALYZING"||s=="RENDERING"||s=="MERGING"
@@ -133,16 +150,17 @@ class MainViewModel(app:Application):AndroidViewModel(app){
  private fun reconcileQueue(){
   viewModelScope.launch(Dispatchers.IO){
    reconcileMutex.withLock{
+   val manager=workManager() ?: return@withLock
    val prefs=getApplication<Application>().getSharedPreferences(PREFS_NAME,0)
    var ps=store.list()
    val migration=prefs.getInt(QUEUE_VERSION_KEY,0)<QUEUE_VERSION
    if(migration){
-    ps.forEach{wm.cancelUniqueWork("generate-"+it.id);wm.cancelUniqueWork("merge-"+it.id)}
+    ps.forEach{manager.cancelUniqueWork("generate-"+it.id);manager.cancelUniqueWork("merge-"+it.id)}
     ps.filter{isPendingState(it.state)}.forEach{it.state="QUEUED";it.progress=1;it.progressStage="Queued after recovery";store.save(it)}
     prefs.edit().putInt(QUEUE_VERSION_KEY,QUEUE_VERSION).commit()
     ps=store.list()
    }
-   val info=runCatching{wm.getWorkInfosForUniqueWork(MEDIA_QUEUE_NAME).get()}.getOrDefault(emptyList())
+   val info=runCatching{manager.getWorkInfosForUniqueWork(MEDIA_QUEUE_NAME).get()}.getOrDefault(emptyList())
    if(info.none{!it.state.isFinished}){
     ps.filter{isPendingState(it.state)}
      .sortedWith(compareBy<Project>{it.queueRank}.thenBy{it.createdAt}.thenBy{it.updatedAt})
@@ -154,8 +172,9 @@ class MainViewModel(app:Application):AndroidViewModel(app){
  }
 
  private fun observe(workId:java.util.UUID,projectId:String){
+  val manager=workManager() ?: return
   viewModelScope.launch{
-   wm.getWorkInfoByIdFlow(workId).collectLatest{info->
+   runCatching{manager.getWorkInfoByIdFlow(workId).collectLatest{info->
     if(info==null)return@collectLatest
     val target=store.list().firstOrNull{it.id==projectId}?:return@collectLatest
     target.progress=info.progress.getInt(GenerationWorker.KEY_PROGRESS,target.progress)
@@ -187,6 +206,8 @@ class MainViewModel(app:Application):AndroidViewModel(app){
     if(terminal) store.save(target)
     if(_current.value?.id==projectId)_current.value=target
     refresh()
+   }}.onFailure{
+    _error.value="Background job monitoring stopped safely: "+(it.message?:it.javaClass.simpleName)
    }
   }
  }
