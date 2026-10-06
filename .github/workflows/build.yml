@@ -18,8 +18,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.3.1"
-      - name: Validate source
-        run: for i in 1 2 3 4 5; do echo "SOURCE VALIDATION PASS $i"; python3 tools/validate_project.py; done
+      - name: Five-pass code verification
+        run: |
+          for i in 1 2 3 4 5; do
+            echo "CODE VERIFICATION PASS $i"
+            python3 -m py_compile tools/validate_project.py
+            python3 tools/validate_project.py
+            gradle --no-daemon test
+          done
       - name: Create CI signing key
         run: |
           keytool -genkeypair -v -keystore app/ci-release.p12 -storetype PKCS12 -alias ai-universal-auto-editor-pro -keyalg RSA -keysize 2048 -validity 10000 -storepass changeit -keypass changeit -dname "CN=Editor and Merger, OU=Mobile, O=Personal, L=India, ST=Haryana, C=IN"
