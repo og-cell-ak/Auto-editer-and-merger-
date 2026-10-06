@@ -27,7 +27,7 @@ class ProjectStore(private val context: Context) {
     private fun toJson(p:Project)=JSONObject().apply{
         put("id",p.id);put("title",p.title);put("script",p.script);putOpt("timestampPdfPath",p.timestampPdfPath);putOpt("timestampPdfName",p.timestampPdfName)
         putOpt("pdfPath",p.pdfPath);putOpt("pdfName",p.pdfName);put("pdfPageCount",p.pdfPageCount);putOpt("audioPath",p.audioPath);put("visualPaths",JSONArray(p.visualPaths))
-        put("createdAt",p.createdAt);put("updatedAt",p.updatedAt);put("durationMs",p.durationMs);putOpt("outputPath",p.outputPath);put("state",p.state);putOpt("lastError",p.lastError);putOpt("scenePlanJson",p.scenePlanJson);put("progress",p.progress);put("isMerged",p.isMerged);putOpt("mergeItemsJson",p.mergeItemsJson)
+        put("createdAt",p.createdAt);put("updatedAt",p.updatedAt);put("durationMs",p.durationMs);putOpt("outputPath",p.outputPath);put("state",p.state);putOpt("lastError",p.lastError);putOpt("scenePlanJson",p.scenePlanJson);put("progress",p.progress);put("isMerged",p.isMerged);putOpt("mergeItemsJson",p.mergeItemsJson);putOpt("analysisReport",p.analysisReport)
         put("prefs",JSONObject().apply{put("aspectRatio",p.preferences.aspectRatio.name);put("fps",p.preferences.fps);put("exportFormat",p.preferences.exportFormat)})
     }
     private fun fromJson(j:JSONObject):Project{
@@ -37,6 +37,6 @@ class ProjectStore(private val context: Context) {
             j.optString("timestampPdfPath").ifBlank{null},j.optString("timestampPdfName").ifBlank{null},j.optString("pdfPath").ifBlank{null},j.optString("pdfName").ifBlank{null},j.optInt("pdfPageCount"),
             j.optString("audioPath").ifBlank{null},visuals,AppPreferences(aspect,Enums.Resolution.FHD_1080,q.optInt("fps",30).coerceIn(24,60),q.optString("exportFormat","mp4")),
             j.optLong("createdAt",System.currentTimeMillis()),j.optLong("updatedAt",System.currentTimeMillis()),j.optLong("durationMs"),j.optString("outputPath").ifBlank{null},
-            j.optString("state","DRAFT"),j.optString("lastError").ifBlank{null},j.optString("scenePlanJson").ifBlank{null},j.optInt("progress"),j.optBoolean("isMerged"),j.optString("mergeItemsJson").ifBlank{null})
+            j.optString("state","DRAFT"),j.optString("lastError").ifBlank{null},j.optString("scenePlanJson").ifBlank{null},j.optInt("progress"),j.optBoolean("isMerged"),j.optString("mergeItemsJson").ifBlank{null},j.optString("analysisReport").ifBlank{null})
     }
 }
