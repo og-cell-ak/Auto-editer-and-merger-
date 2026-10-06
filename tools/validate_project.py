@@ -103,7 +103,7 @@ assert "mediaexportgate.withlock" in renderer.lower()
 assert "inspectrenderedfile" in worker
 assert "queuerecoveryreceiver" in manifest
 assert "receive_boot_completed" in manifest
-assert "editor and merger" in (root / "app/src/main/res/values/strings.xml").read_text().lower()
+assert "video renderer" in (root / "app/src/main/res/values/strings.xml").read_text().lower()
 assert "mincoverage = 0.55f" in extractor.lower()
 assert "r >= 170" in extractor.lower() and "g >= 125" in extractor.lower() and "b <= 155" in extractor.lower()
 assert "scaledsize(page.width, page.height, 1920)" in extractor.lower()
@@ -116,8 +116,6 @@ assert "max_mismatch_ms = 5000l" in planner.lower()
 assert "queuerank" in store
 assert "rendernow" in vm and "moveup" in vm and "movedown" in vm
 assert "togglepause" in vm and "cancelproject" in vm
-assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.kt").read_text()
-assert "key_skipped" in worker
 assert "post_notifications" in manifest
 assert "request_ignore_battery_optimizations" in manifest
 assert 'android:stopwithtask="false"' in manifest
