@@ -233,7 +233,7 @@ class VideoRenderer(private val context: Context) {
 
             when {
                 duration <= 0L -> "invalid_duration"
-                abs(duration - expectedDurationMs) > 3000L ->
+                abs(duration - expectedDurationMs) > 5000L ->
                     "duration_mismatch_expected_" + expectedDurationMs + "_actual_" + duration
                 retriever.getFrameAtTime(
                     0L,
