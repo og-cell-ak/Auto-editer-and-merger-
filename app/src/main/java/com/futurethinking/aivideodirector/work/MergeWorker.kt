@@ -31,5 +31,5 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
    val video=EditedMediaItemSequence.withVideoFrom(items);val audio=EditedMediaItemSequence.withAudioFrom(items);tr!!.start(Composition.Builder(video,audio).build(),file.absolutePath);handler.post(poll)
   }}
  private fun foreground(text:String,n:Int):ForegroundInfo{val id="ai_merge";if(Build.VERSION.SDK_INT>=26)applicationContext.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(id,"Video merge",NotificationManager.IMPORTANCE_LOW));val no=NotificationCompat.Builder(applicationContext,id).setContentTitle("AI Universal Auto Editor Pro").setContentText(text).setSmallIcon(android.R.drawable.ic_media_play).setOnlyAlertOnce(true).setOngoing(true).setProgress(100,n,false).build();return ForegroundInfo(1002,no,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)}
- companion object{const val KEY_PROJECT_ID="project_id";const val KEY_PROGRESS="progress";const val KEY_STAGE="stage";const val KEY_ERROR="error"}
+ companion object{const val KEY_PROJECT_ID="project_id";const val KEY_PROGRESS="progress";const val KEY_STAGE="stage";const val KEY_ERROR="error";const val KEY_RESULT_STATE="result_state"}
 }
