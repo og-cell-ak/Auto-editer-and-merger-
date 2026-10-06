@@ -231,7 +231,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   private const val GENERATION_TAG="editor-generation"
   private const val PREFS_NAME="editor-and-merger-settings"
   private const val QUEUE_VERSION_KEY="media_queue_version"
-  private const val QUEUE_VERSION=5
+  private const val QUEUE_VERSION=6
   private const val MIN_FREE_STORAGE_BYTES=500L*1024L*1024L
  }
 }
