@@ -18,7 +18,6 @@ import com.futurethinking.aivideodirector.data.ProjectStore
 import com.futurethinking.aivideodirector.pipeline.PdfTimestampScriptReader
 import com.futurethinking.aivideodirector.pipeline.TimestampScriptParser
 import com.futurethinking.aivideodirector.work.GenerationWorker
-import com.futurethinking.aivideodirector.work.MergeWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -36,8 +35,6 @@ class MainViewModel(app:Application):AndroidViewModel(app){
  val current=_current.asStateFlow()
  private val _error=MutableStateFlow<String?>(null)
  val error=_error.asStateFlow()
- private val _merge=MutableStateFlow<List<String>>(emptyList())
- val mergeSelection=_merge.asStateFlow()
  private val reconcileMutex=Mutex()
 
  init{
@@ -60,7 +57,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
  }
 
  fun refresh(){viewModelScope.launch(Dispatchers.IO){_projects.value=sortForQueue(store.list())}}
- private fun sortForQueue(list:List<Project>)=list.sortedWith(compareBy<Project>{if(it.isMerged&&it.state=="IMPORT")Long.MAX_VALUE else if(it.state=="QUEUED"||it.state=="PAUSED"||it.state=="ANALYZING"||it.state=="RENDERING"||it.state=="MERGING")0 else 1}.thenBy{if(it.queueRank>0)it.queueRank else it.createdAt}.thenByDescending{it.updatedAt})
+ private fun sortForQueue(list:List<Project>)=list.sortedWith(compareBy<Project>{if(it.isMerged&&it.state=="IMPORT")Long.MAX_VALUE else if(it.state=="QUEUED"||it.state=="PAUSED"||it.state=="ANALYZING"||it.state=="RENDERING")0 else 1}.thenBy{if(it.queueRank>0)it.queueRank else it.createdAt}.thenByDescending{it.updatedAt})
  fun createProject(){
   if(store.list().count{!it.isMerged}<10)_current.value=store.create().also{it.queueRank=(store.list().maxOfOrNull{p->p.queueRank}?:System.currentTimeMillis())+1;store.save(it)}
   else _error.value="Maximum 10 projects reached."
@@ -112,7 +109,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   if(store.availableStorageBytes()<MIN_FREE_STORAGE_BYTES){
    _error.value="Storage is too low for a safe render. Free at least 500 MB and try again.";return
   }
-  if(p.state=="QUEUED"||p.state=="ANALYZING"||p.state=="RENDERING"||p.state=="MERGING"){
+  if(p.state=="QUEUED"||p.state=="ANALYZING"||p.state=="RENDERING"){
    _error.value="This project is already queued or rendering.";return
   }
   p.state="QUEUED";p.progress=1;p.progressStage="Queued";if(p.queueRank<=0)p.queueRank=System.currentTimeMillis();p.lastError=null;store.save(p)
@@ -127,13 +124,6 @@ class MainViewModel(app:Application):AndroidViewModel(app){
    .setConstraints(storageConstraints())
    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,10,TimeUnit.SECONDS).build()
 
- private fun mergeRequest(p:Project):OneTimeWorkRequest=
-  OneTimeWorkRequestBuilder<MergeWorker>()
-   .setInputData(workDataOf(MergeWorker.KEY_PROJECT_ID to p.id))
-   .addTag(MERGE_TAG)
-   .setConstraints(storageConstraints())
-   .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,10,TimeUnit.SECONDS).build()
-
  private fun storageConstraints()=Constraints.Builder().setRequiresStorageNotLow(true).build()
 
  private fun enqueueMediaWork(req:OneTimeWorkRequest){
@@ -145,7 +135,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
    .onFailure{_error.value="Could not start background rendering: "+(it.message?:it.javaClass.simpleName)}
  }
 
- private fun isPendingState(s:String)=s=="QUEUED"||s=="ANALYZING"||s=="RENDERING"||s=="MERGING"
+ private fun isPendingState(s:String)=s=="QUEUED"||s=="ANALYZING"||s=="RENDERING"
 
  private fun reconcileQueue(){
   viewModelScope.launch(Dispatchers.IO){
@@ -162,9 +152,9 @@ class MainViewModel(app:Application):AndroidViewModel(app){
    }
    val info=runCatching{manager.getWorkInfosForUniqueWork(MEDIA_QUEUE_NAME).get()}.getOrDefault(emptyList())
    if(info.none{!it.state.isFinished}){
-    ps.filter{isPendingState(it.state)}
+    ps.filter{!it.isMerged&&isPendingState(it.state)}
      .sortedWith(compareBy<Project>{it.queueRank}.thenBy{it.createdAt}.thenBy{it.updatedAt})
-     .forEach{enqueueMediaWork(if(it.isMerged)mergeRequest(it)else generationRequest(it))}
+     .forEach{enqueueMediaWork(generationRequest(it))}
    }
    _projects.value=store.list()
    }
@@ -223,31 +213,8 @@ class MainViewModel(app:Application):AndroidViewModel(app){
  fun retryProject(p:Project){
   if(p.state!="ERROR")return
   p.state="QUEUED";p.progress=1;p.progressStage="Retry queued";p.queueRank=(store.list().filter{it.queueRank>0}.maxOfOrNull{it.queueRank}?:System.currentTimeMillis())+1;p.lastError=null;store.save(p)
-  enqueueMediaWork(if(p.isMerged)mergeRequest(p)else generationRequest(p))
+  enqueueMediaWork(generationRequest(p))
   refresh()
- }
-
- fun setMergeSelection(ids:List<String>){_merge.value=ids}
- fun addMergeItem(id:String){if(id !in _merge.value)_merge.value=_merge.value+id}
- fun removeMergeItem(id:String){_merge.value=_merge.value.filterNot{it==id}}
-
- fun importMergeVideo(uri:android.net.Uri,onDone:(String)->Unit){
-  val temp=store.create("Merge Import");temp.isMerged=true;temp.state="IMPORT";store.save(temp)
-  viewModelScope.launch(Dispatchers.IO){
-   runCatching{store.importUri(temp,uri,"merge-video")}
-    .onSuccess{onDone(it)}
-    .onFailure{temp.state="ERROR";temp.lastError=it.message;store.save(temp);_error.value=it.message}
-  }
- }
-
- fun merge(imported:List<String>){
-  val items=_merge.value
-  if(items.isEmpty()&&imported.isEmpty()){_error.value="Select at least one rendered project or imported video.";return}
-  if(store.availableStorageBytes()<MIN_FREE_STORAGE_BYTES){_error.value="Storage is too low for a safe merge. Free at least 500 MB and try again.";return}
-  val p=store.create("Merged Video");p.isMerged=true;p.state="QUEUED";p.progress=1;p.progressStage="Merge queued"
-  p.mergeItemsJson=org.json.JSONArray((items+imported).map{if(it.startsWith("video:"))it else "project:"+it}).toString()
-  store.save(p)
-  val req=mergeRequest(p);enqueueMediaWork(req);observe(req.id,p.id);refresh()
  }
 
  fun shareOutput(p:Project):Intent?{
