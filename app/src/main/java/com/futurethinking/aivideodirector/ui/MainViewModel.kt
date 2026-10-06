@@ -59,7 +59,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   reconcileQueue()
  }
 
-  fun refresh(){viewModelScope.launch(Dispatchers.IO){_projects.value=sortForQueue(store.list())}}
+ fun refresh(){viewModelScope.launch(Dispatchers.IO){_projects.value=sortForQueue(store.list())}}
  private fun sortForQueue(list:List<Project>)=list.sortedWith(compareBy<Project>{if(it.isMerged&&it.state=="IMPORT")Long.MAX_VALUE else if(it.state=="QUEUED"||it.state=="PAUSED"||it.state=="ANALYZING"||it.state=="RENDERING"||it.state=="MERGING")0 else 1}.thenBy{if(it.queueRank>0)it.queueRank else it.createdAt}.thenByDescending{it.updatedAt})
  fun createProject(){
   if(store.list().count{!it.isMerged}<10)_current.value=store.create().also{it.queueRank=(store.list().maxOfOrNull{p->p.queueRank}?:System.currentTimeMillis())+1;store.save(it)}
@@ -145,7 +145,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
    .onFailure{_error.value="Could not start background rendering: "+(it.message?:it.javaClass.simpleName)}
  }
 
- private fun isPendingState(s:String)=s=="QUEUED"||s=="ANALYZING"||s=="RENDERING"
+ private fun isPendingState(s:String)=s=="QUEUED"||s=="ANALYZING"||s=="RENDERING"||s=="MERGING"
 
  private fun reconcileQueue(){
   viewModelScope.launch(Dispatchers.IO){
@@ -265,7 +265,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   private const val MERGE_TAG="editor-merge"
   private const val PREFS_NAME="editor-and-merger-settings"
   private const val QUEUE_VERSION_KEY="media_queue_version"
-  private const val QUEUE_VERSION=4
+  private const val QUEUE_VERSION=5
   private const val MIN_FREE_STORAGE_BYTES=500L*1024L*1024L
  }
 }
