@@ -4,3 +4,6 @@ Multi project timestamped PDF + audio + yellow separator panel video editor.
 
 
 Stability verification: Android foreground-service compatibility patch.
+
+
+Stability verification: five-pass code validation is required on every release build.
