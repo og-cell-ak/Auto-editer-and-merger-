@@ -40,7 +40,7 @@ planner = (java_root / "com/futurethinking/aivideodirector/pipeline/TimestampSce
 extractor = (java_root / "com/futurethinking/aivideodirector/media/PdfVisualExtractor.kt").read_text()
 renderer = (java_root / "com/futurethinking/aivideodirector/media/VideoRenderer.kt").read_text()
 
-assert "pdfpicker" in main and "timestamppdfpicker" in main and "audiopicker" in main
+assert "opendocument" in main and "importpdf" in vm and "importtimestamppdf" in vm and "importaudio" in vm
 assert "paste your timestamped script" not in main
 assert "pdftimestampscriptreader" in worker
 for forbidden in [
