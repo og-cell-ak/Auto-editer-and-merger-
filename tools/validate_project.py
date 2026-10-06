@@ -42,6 +42,9 @@ recovery = (java_root / "com/futurethinking/aivideodirector/work/QueueRecoveryRe
 planner = (java_root / "com/futurethinking/aivideodirector/pipeline/TimestampScenePlanner.kt").read_text()
 extractor = (java_root / "com/futurethinking/aivideodirector/media/PdfVisualExtractor.kt").read_text()
 renderer = (java_root / "com/futurethinking/aivideodirector/media/VideoRenderer.kt").read_text()
+planner_lower = planner.lower()
+extractor_lower = extractor.lower()
+renderer_lower = renderer.lower()
 store = (java_root / "com/futurethinking/aivideodirector/data/ProjectStore.kt").read_text().lower()
 manifest = (root / "app/src/main/AndroidManifest.xml").read_text().lower()
 gradle = (root / "app/build.gradle.kts").read_text().lower()
@@ -63,11 +66,11 @@ for forbidden in [
 
 assert "timestampscriptparser" in worker
 assert "timestampsceneplanner" in worker
-assert "orderedPdfVisuals" in planner
-assert "pageIndex in 0 until renderer.pageCount" in extractor
-assert "setImageDurationMs" in renderer
-assert "setDurationUs" in renderer
-assert "createBlack" in renderer
+assert "orderedpdfvisuals" in planner_lower
+assert "pageindex in 0 until renderer.pagecount" in extractor_lower
+assert "setimagedurationms" in renderer_lower
+assert "setdurationus" in renderer_lower
+assert "createblack" in renderer_lower
 assert "atomicfile" in store
 assert "synchronized(projectstore::class.java)" in store
 assert "editor-and-merger-media-queue" in vm
@@ -106,8 +109,8 @@ assert "r >= 170" in extractor.lower() and "g >= 125" in extractor.lower() and "
 assert "scaledsize(page.width, page.height, 1920)" in extractor.lower()
 assert "val scale = 1.018f + (0.010f * eased)" in renderer
 assert "val travel = 0.006f" in renderer
-assert "left_to_right" in renderer.lower() and "right_to_left" in renderer.lower()
-assert "top_to_bottom" in renderer.lower() and "bottom_to_top" in renderer.lower()
+assert "left_to_right" in renderer_lower and "right_to_left" in renderer_lower
+assert "top_to_bottom" in renderer_lower and "bottom_to_top" in renderer_lower
 assert "max_mismatch_ms = 5000l" in planner.lower()
 
 assert "queuerank" in store
