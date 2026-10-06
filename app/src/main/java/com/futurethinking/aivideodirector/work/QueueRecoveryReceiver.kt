@@ -55,7 +55,18 @@ class QueueRecoveryReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_MY_PACKAGE_REPLACED -> QueueRecovery.reconcile(context)
+            Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                // Never let boot/package-replacement recovery crash the application process.
+                // Run it off the receiver thread and finish even if WorkManager is temporarily unavailable.
+                val pending = goAsync()
+                Thread {
+                    try {
+                        runCatching { QueueRecovery.reconcile(context.applicationContext) }
+                    } finally {
+                        pending.finish()
+                    }
+                }.start()
+            }
         }
     }
 }
