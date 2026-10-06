@@ -83,7 +83,7 @@ assert 'android:label="editor and merger"' in manifest
 assert "fastmp4concatenator" not in all_source.lower()
 assert "import android.media.mediamuxer" not in all_source.lower()
 assert "mediamuxer(" not in all_source.lower()
-assert "awaitExport" in merge
+assert "awaitExport".lower() in merge
 assert "mediaexportgate.withlock" in merge
 assert "result.retry()" in merge
 
