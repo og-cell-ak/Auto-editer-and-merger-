@@ -123,7 +123,7 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
   val no=NotificationCompat.Builder(applicationContext,id).setContentTitle("Editor and Merger")
    .setContentText(text).setSmallIcon(android.R.drawable.ic_media_play).setOnlyAlertOnce(true)
    .setOngoing(true).setProgress(100,n.coerceIn(0,100),false).build()
-  return ForegroundInfo(1002,no,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING)
+  return ForegroundInfo(1002,no,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
  }
 
  companion object{
