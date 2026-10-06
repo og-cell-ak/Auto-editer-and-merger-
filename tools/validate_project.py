@@ -85,7 +85,7 @@ assert "mergevideos" not in main
 assert "importmergevideo" not in vm
 assert "mergeselection" not in vm
 assert "mergeitemsjson" in store  # legacy data remains parseable, but is not executable behavior.
-assert "mediaexportgate.withlock" in renderer
+assert "mediaexportgate.withlock" in renderer.lower()
 assert "setforeground(foreground" in worker
 assert "result.retry()" in worker
 
