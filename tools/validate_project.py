@@ -15,6 +15,9 @@ required = [
     "app/src/main/java/com/futurethinking/aivideodirector/media/PdfVisualExtractor.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/media/SceneFrameFactory.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/media/VideoRenderer.kt",
+    "app/src/main/java/com/futurethinking/aivideodirector/media/MediaExportGate.kt",
+    "app/src/main/java/com/futurethinking/aivideodirector/work/MergeWorker.kt",
+    "app/src/main/java/com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/pipeline/AudioDurationReader.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/pipeline/TimestampScriptParser.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/pipeline/PdfTimestampScriptReader.kt",
@@ -83,3 +86,23 @@ assert 'key_result_state to "error"' in worker
 assert 'android:label="editor and merger"' in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
 
 print("VALIDATION_OK")
+
+# Core visual and stability invariants: do not change without an intentional product decision.
+assert "availablestoragebytes" in store
+assert "progressstage" in store
+assert "setrequiresstoragenotlow" in vm
+assert "mediaexportgate" in (java_root / "com/futurethinking/aivideodirector/media/MediaExportGate.kt").read_text().lower()
+assert "mediaexportgate.withlock" in renderer.lower()
+assert "mediaexportgate.withlock" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text().lower()
+assert "inspectrenderedfile" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text().lower()
+assert "queuerecoveryreceiver" in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
+assert "receive_boot_completed" in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
+assert "editor and merger" in (root / "app/src/main/res/values/strings.xml").read_text().lower()
+assert "mincoverage = 0.55f" in extractor.lower()
+assert "r >= 170" in extractor.lower() and "g >= 125" in extractor.lower() and "b <= 155" in extractor.lower()
+assert "scaledsize(page.width, page.height, 1920)" in extractor.lower()
+assert "val scale = 1.018f + (0.010f * eased)" in renderer
+assert "val travel = 0.006f" in renderer
+assert "left_to_right" in renderer.lower() and "right_to_left" in renderer.lower()
+assert "top_to_bottom" in renderer.lower() and "bottom_to_top" in renderer.lower()
+assert "max_mismatch_ms = 5000l" in planner.lower()
