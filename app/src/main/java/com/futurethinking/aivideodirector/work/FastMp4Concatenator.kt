@@ -127,7 +127,7 @@ object FastMp4Concatenator {
             val info=MediaCodec.BufferInfo()
             while(true){
                 buffer.clear()
-                val sourceTrack=extractor.sampleTrackIndex()
+                val sourceTrack=extractor.sampleTrackIndex
                 if(sourceTrack<0)break
                 val size=extractor.readSampleData(buffer,0)
                 if(size<0)break

@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.work.Configuration
 
 class EditorApplication : Application(), Configuration.Provider {
-    override fun getWorkManagerConfiguration(): Configuration =
+    override val workManagerConfiguration: Configuration =
         Configuration.Builder()
             .setDefaultProcessName(packageName)
             .build()
