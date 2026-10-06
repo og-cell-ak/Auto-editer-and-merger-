@@ -50,6 +50,7 @@ fun EditorApp(
 ) {
     val projects by vm.projects.collectAsStateWithLifecycle()
     val current by vm.current.collectAsStateWithLifecycle()
+    val error by vm.error.collectAsStateWithLifecycle()
     var screen by remember { mutableStateOf("projects") }
 
     MaterialTheme {
@@ -73,6 +74,16 @@ fun EditorApp(
             }
         ) { padding ->
             Surface(Modifier.fillMaxSize().padding(padding)) {
+                Column(Modifier.fillMaxSize()) {
+                    if (!error.isNullOrBlank()) {
+                        Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text("Problem", style = MaterialTheme.typography.titleMedium)
+                                Text(error!!)
+                            }
+                        }
+                    }
+                    Box(Modifier.weight(1f)) {
                 when (screen) {
                     "projects" -> ProjectList(projects.filterNot { it.isMerged && it.state == "IMPORT" }) {
                         vm.selectProject(it)
@@ -88,6 +99,8 @@ fun EditorApp(
                         { ts.launch(arrayOf("application/pdf")) },
                         onExport
                     )
+                }
+                    }
                 }
             }
         }
@@ -106,6 +119,7 @@ fun ProjectList(projects: List<Project>, onOpen: (Project) -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text(project.title)
                         Text(if (project.state == "READY") "Ready • 100%" else project.state + " • " + project.progress + "%")
+                        if (project.progressStage.isNotBlank()) Text(project.progressStage, style = MaterialTheme.typography.bodySmall)
                     }
                     if (project.progress in 1..99) {
                         CircularProgressIndicator(progress = { project.progress / 100f }, modifier = Modifier.size(30.dp))
@@ -150,6 +164,9 @@ fun EditorScreen(
                     }
                     if (project.outputPath != null && project.state == "READY") {
                         Button(onClick = { onExport(project) }, modifier = Modifier.fillMaxWidth()) { Text("Export video") }
+                    }
+                    if (project.state == "ERROR") {
+                        OutlinedButton(onClick = { vm.retryProject(project) }, modifier = Modifier.fillMaxWidth()) { Text("Retry project") }
                     }
                 }
             }
