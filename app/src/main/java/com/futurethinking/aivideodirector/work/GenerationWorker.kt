@@ -108,10 +108,20 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
     store.outputDir(p),
     p.title.replace(Regex("[^A-Za-z0-9._-]+"),"_").take(48).ifBlank{"AI_Video"}+".mp4"
    )
+   var lastPersistAt = 0L
+   var lastPersistProgress = -1
    VideoRenderer(applicationContext).render(plan.scenes,p.audioPath,p.preferences,out){n->
     if(!isStopped){
-     p.progress=n;p.progressStage="Rendering video";p.state="RENDERING";store.save(p)
-     setProgressAsync(workDataOf(KEY_PROGRESS to n,KEY_STAGE to "Rendering video"))
+     val now = System.currentTimeMillis()
+     p.progress=n
+     p.progressStage="Rendering video"
+     p.state="RENDERING"
+     if(n != lastPersistProgress && (now-lastPersistAt >= 1000L || n >= 98)){
+      lastPersistAt = now
+      lastPersistProgress = n
+      store.save(p)
+      setProgressAsync(workDataOf(KEY_PROGRESS to n,KEY_STAGE to "Rendering video"))
+     }
     }
    }
    require(QualityControl.inspectRenderedFile(out,audio,true)==null){
