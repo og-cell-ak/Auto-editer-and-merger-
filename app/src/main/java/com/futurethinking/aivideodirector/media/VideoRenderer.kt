@@ -23,6 +23,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.math.abs
 
 class VideoRenderer(private val context: Context) {
@@ -33,6 +35,7 @@ class VideoRenderer(private val context: Context) {
         outputFile: File,
         onProgress: (Int) -> Unit
     ) {
+        EXPORT_MUTEX.withLock {
         require(scenes.isNotEmpty()) { "No timeline scenes were generated" }
         val narration = File(narrationPath ?: "")
         require(narration.exists() && narration.length() > 4096L) {
@@ -118,6 +121,7 @@ class VideoRenderer(private val context: Context) {
         } finally {
             frameDir.deleteRecursively()
             if (temp.exists()) temp.delete()
+        }
         }
     }
 
@@ -243,4 +247,5 @@ class VideoRenderer(private val context: Context) {
             retriever.release()
         }
     }
+    companion object { private val EXPORT_MUTEX = Mutex() }
 }
