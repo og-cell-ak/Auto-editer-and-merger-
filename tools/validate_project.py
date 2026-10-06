@@ -106,3 +106,9 @@ assert "val travel = 0.006f" in renderer
 assert "left_to_right" in renderer.lower() and "right_to_left" in renderer.lower()
 assert "top_to_bottom" in renderer.lower() and "bottom_to_top" in renderer.lower()
 assert "max_mismatch_ms = 5000l" in planner.lower()
+
+assert "queueRank" in store
+assert "renderNow" in vm and "moveUp" in vm and "moveDown" in vm
+assert "togglePause" in vm and "cancelProject" in vm
+assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.kt").read_text()
+assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text()
