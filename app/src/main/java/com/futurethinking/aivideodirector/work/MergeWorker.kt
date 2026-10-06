@@ -64,11 +64,11 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
    val items=paths.map{EditedMediaItem.Builder(MediaItem.fromUri(android.net.Uri.fromFile(File(it)))).build()}
 
    stage(12,"Merging videos")
+   // Use the same Media3 Transformer path as the renderer. Do not bypass
+   // Media3 with raw MediaMuxer sample concatenation: source videos can have
+   // different timestamp/edit-list details even when their codecs match.
    MediaExportGate.withLock{
-    val direct=FastMp4Concatenator.tryConcatenate(paths,temp){n->stage(12+(n*86/100),"Merging videos")}
-    if(!direct){
-     awaitExport(items,temp){n->stage(12+(n*86/100),"Merging videos")}
-    }
+    awaitExport(items,temp){n->stage(12+(n*86/100),"Merging videos")}
    }
 
    require(temp.exists()&&temp.length()>8192L){"merge_output_invalid"}
@@ -84,7 +84,7 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
    if(t is CancellationException)throw t
    val transient=t is java.io.IOException ||
      t is ExportException ||
-     (t is IllegalStateException && !t.message.orEmpty().contains("project_output_missing")) 
+     (t is IllegalStateException && !t.message.orEmpty().contains("project_output_missing"))
    if(transient && runAttemptCount < 3){
     p.state="QUEUED";p.progress=maxOf(1,p.progress);p.progressStage="Retrying merge after temporary media issue"
     p.lastError="Temporary merge/media issue. Android will retry automatically."
