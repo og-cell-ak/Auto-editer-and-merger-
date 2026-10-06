@@ -22,7 +22,7 @@ data class Project(
     var updatedAt: Long = System.currentTimeMillis(), var durationMs: Long = 0L,
     var outputPath: String? = null, var state: String = "DRAFT", var lastError: String? = null,
     var scenePlanJson: String? = null, var progress: Int = 0,
-    var isMerged: Boolean = false, var mergeItemsJson: String? = null
+    var isMerged: Boolean = false, var mergeItemsJson: String? = null, var analysisReport: String? = null
 )
 data class TimestampMarker(val startMs: Long, val explicitEndMs: Long?, val body: String, val raw: String)
 data class ScenePlan(
