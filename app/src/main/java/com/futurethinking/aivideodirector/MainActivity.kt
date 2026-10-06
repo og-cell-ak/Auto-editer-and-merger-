@@ -85,7 +85,7 @@ fun EditorApp(
                     }
                     Box(Modifier.weight(1f)) {
                 when (screen) {
-                    "projects" -> ProjectList(projects.filterNot { it.isMerged && it.state == "IMPORT" }) {
+                    "projects" -> ProjectList(projects.filterNot { it.isMerged && it.state == "IMPORT" }, vm) {
                         vm.selectProject(it)
                         screen = "editor"
                     }
@@ -108,21 +108,30 @@ fun EditorApp(
 }
 
 @Composable
-fun ProjectList(projects: List<Project>, onOpen: (Project) -> Unit) {
+fun ProjectList(projects: List<Project>, vm: com.futurethinking.aivideodirector.ui.MainViewModel, onOpen: (Project) -> Unit) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { Text("Up to 10 projects can be queued. Rendering runs one heavy media job at a time for stability.") }
         items(projects, key = { it.id }) { project ->
             Card(onClick = { onOpen(project) }, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(if (project.isMerged) Icons.Default.MergeType else Icons.Default.Movie, null)
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(project.title)
-                        Text(if (project.state == "READY") "Ready • 100%" else project.state + " • " + project.progress + "%")
-                        if (project.progressStage.isNotBlank()) Text(project.progressStage, style = MaterialTheme.typography.bodySmall)
+                Column(Modifier.padding(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (project.isMerged) Icons.Default.MergeType else Icons.Default.Movie, null)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(project.title)
+                            Text(if (project.state == "READY") "Ready • 100%" else project.state + " • " + project.progress + "%")
+                            if (project.progressStage.isNotBlank()) Text(project.progressStage, style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (project.progress in 1..99) CircularProgressIndicator(progress = { project.progress / 100f }, modifier = Modifier.size(30.dp))
                     }
-                    if (project.progress in 1..99) {
-                        CircularProgressIndicator(progress = { project.progress / 100f }, modifier = Modifier.size(30.dp))
+                    if (project.state == "QUEUED" || project.state == "PAUSED") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            TextButton(onClick = { vm.renderNow(project) }) { Text("Render now") }
+                            TextButton(onClick = { vm.moveUp(project) }) { Text("↑") }
+                            TextButton(onClick = { vm.moveDown(project) }) { Text("↓") }
+                            TextButton(onClick = { vm.togglePause(project) }) { Text(if (project.state == "PAUSED") "Resume" else "Pause") }
+                            TextButton(onClick = { vm.cancelProject(project) }) { Text("Cancel") }
+                        }
                     }
                 }
             }
