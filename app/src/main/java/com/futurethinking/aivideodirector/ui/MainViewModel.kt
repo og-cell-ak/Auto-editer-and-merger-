@@ -44,9 +44,10 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   reconcileQueue()
  }
 
- fun refresh(){viewModelScope.launch(Dispatchers.IO){_projects.value=store.list()}}
+ fun refresh(){viewModelScope.launch(Dispatchers.IO){_projects.value=sortForQueue(store.list())}}
+ private fun sortForQueue(list:List<Project>)=list.sortedWith(compareBy<Project>{if(it.isMerged&&it.state=="IMPORT")Long.MAX_VALUE else if(it.state=="QUEUED"||it.state=="PAUSED"||it.state=="ANALYZING"||it.state=="RENDERING"||it.state=="MERGING")0 else 1}.thenBy{if(it.queueRank>0)it.queueRank else it.createdAt}.thenByDescending{it.updatedAt})
  fun createProject(){
-  if(store.list().count{!it.isMerged}<10)_current.value=store.create()
+  if(store.list().count{!it.isMerged}<10)_current.value=store.create().also{it.queueRank=(store.list().maxOfOrNull{p->p.queueRank}?:System.currentTimeMillis())+1;store.save(it)}
   else _error.value="Maximum 10 projects reached."
   refresh()
  }
@@ -96,7 +97,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   if(store.availableStorageBytes()<MIN_FREE_STORAGE_BYTES){
    _error.value="Storage is too low for a safe render. Free at least 500 MB and try again.";return
   }
-  p.state="QUEUED";p.progress=1;p.progressStage="Queued";p.lastError=null;store.save(p)
+  p.state="QUEUED";p.progress=1;p.progressStage="Queued";if(p.queueRank<=0)p.queueRank=System.currentTimeMillis();p.lastError=null;store.save(p)
   val req=generationRequest(p)
   enqueueMediaWork(req);observe(req.id,p.id);refresh()
  }
@@ -137,7 +138,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
    val info=runCatching{wm.getWorkInfosForUniqueWork(MEDIA_QUEUE_NAME).get()}.getOrDefault(emptyList())
    if(info.none{!it.state.isFinished}){
     ps.filter{isPendingState(it.state)}
-     .sortedWith(compareBy<Project>{it.createdAt}.thenBy{it.updatedAt})
+     .sortedWith(compareBy<Project>{it.queueRank}.thenBy{it.createdAt}.thenBy{it.updatedAt})
      .forEach{enqueueMediaWork(if(it.isMerged)mergeRequest(it)else generationRequest(it))}
    }
    _projects.value=store.list()
@@ -167,7 +168,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
      target.lastError=info.outputData.getString(GenerationWorker.KEY_ERROR)
      _error.value=target.lastError
     }
-    if(info.state==WorkInfo.State.CANCELLED&&target.state!="READY"&&target.state!="ERROR"){
+    if(info.state==WorkInfo.State.CANCELLED&&target.state!="READY"&&target.state!="ERROR"&&target.state!="PAUSED"&&target.state!="CANCELLED"){
      target.state="QUEUED";target.progress=1;target.progressStage="Queued for recovery"
     }
     store.save(target)
@@ -177,9 +178,17 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   }
  }
 
+ private fun pendingProjects()=store.list().filter{it.state=="QUEUED"||it.state=="PAUSED"}.sortedBy{it.queueRank}
+
+ fun renderNow(p:Project){p.state="QUEUED";p.queueRank=(store.list().filter{it.queueRank>0}.minOfOrNull{it.queueRank}?:System.currentTimeMillis())-1;p.progress=1;p.progressStage="Priority: render next";store.save(p);refresh();reconcileQueue()}
+ fun moveUp(p:Project){viewModelScope.launch(Dispatchers.IO){val q=pendingProjects();val i=q.indexOfFirst{it.id==p.id};if(i>0){val a=q[i-1];val r=p.queueRank;p.queueRank=a.queueRank;a.queueRank=r;store.save(a);store.save(p)};_projects.value=sortForQueue(store.list())}}
+ fun moveDown(p:Project){viewModelScope.launch(Dispatchers.IO){val q=pendingProjects();val i=q.indexOfFirst{it.id==p.id};if(i>=0&&i<q.lastIndex){val a=q[i+1];val r=p.queueRank;p.queueRank=a.queueRank;a.queueRank=r;store.save(a);store.save(p)};_projects.value=sortForQueue(store.list())}}
+ fun togglePause(p:Project){p.state=if(p.state=="PAUSED")"QUEUED" else "PAUSED";p.progressStage=if(p.state=="PAUSED")"Paused" else "Queued";store.save(p);refresh();reconcileQueue()}
+ fun cancelProject(p:Project){p.state="CANCELLED";p.progress=0;p.progressStage="Cancelled";p.lastError=null;store.save(p);refresh()}
+ 
  fun retryProject(p:Project){
   if(p.state!="ERROR")return
-  p.state="QUEUED";p.progress=1;p.progressStage="Retry queued";p.lastError=null;store.save(p)
+  p.state="QUEUED";p.progress=1;p.progressStage="Retry queued";p.queueRank=(store.list().filter{it.queueRank>0}.maxOfOrNull{it.queueRank}?:System.currentTimeMillis())+1;p.lastError=null;store.save(p)
   enqueueMediaWork(if(p.isMerged)mergeRequest(p)else generationRequest(p))
   refresh()
  }
