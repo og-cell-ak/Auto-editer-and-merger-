@@ -17,7 +17,7 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
    require(p.timestampPdfPath?.let{File(it).exists()}==true){"timestamp_script_pdf_missing"};require(p.audioPath?.let{File(it).exists()}==true){"voiceover_missing"};require(p.pdfPath?.let{File(it).exists()}==true){"pdf_missing"}
    p.state="ANALYZING";p.lastError=null;p.analysisReport=null;store.save(p);stage(5,"Reading timestamp PDF")
    val script=PdfTimestampScriptReader(applicationContext).read(p.timestampPdfPath!!);p.script=script;val audio=AudioDurationReader.durationMs(p.audioPath!!);require(audio>0){"audio_duration_unavailable"};val markers=TimestampScriptParser().parse(script);stage(10,"Extracting yellow-line panels")
-   val dir=File(store.assetDir(p),"pdf-visuals");dir.deleteRecursively();val ex=PdfVisualExtractor(applicationContext).extract(p.pdfPath!!,dir){a,b->stage(a,b)};require(ex.visualPaths.isNotEmpty()){"pdf_extraction_failed"};p.pdfPageCount=ex.pageCount;p.visualPaths.clear();p.visualPaths.addAll(ex.visualPaths);store.save(p)
+   val dir=File(store.assetDir(p),"pdf-visuals");dir.deleteRecursively();val ex=PdfVisualExtractor(applicationContext).extract(p.pdfPath!!,dir){a,b->if(!isStopped){p.progress=a;p.state="RENDERING";store.save(p);setProgressAsync(workDataOf(KEY_PROGRESS to a,KEY_STAGE to b))}};require(ex.visualPaths.isNotEmpty()){"pdf_extraction_failed"};p.pdfPageCount=ex.pageCount;p.visualPaths.clear();p.visualPaths.addAll(ex.visualPaths);store.save(p)
    stage(58,"Building timestamp timeline");val plan=TimestampScenePlanner().plan(markers,ex.visualPaths,audio,p.preferences)
    val rawTimelineEnd=plan.scenes.maxOfOrNull{it.endMs}?:0L
    val durationDelta=rawTimelineEnd-audio
