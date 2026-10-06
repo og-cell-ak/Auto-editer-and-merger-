@@ -11,7 +11,7 @@ import org.json.JSONArray;import org.json.JSONObject
 class GenerationWorker(appContext:android.content.Context,params:WorkerParameters):CoroutineWorker(appContext,params){
  override suspend fun doWork():Result{
   val id=inputData.getString(KEY_PROJECT_ID)?:return Result.failure(workDataOf(KEY_ERROR to "missing_project_id"));val store=ProjectStore(applicationContext);val p=store.list().firstOrNull{it.id==id}?:return Result.failure(workDataOf(KEY_ERROR to "project_not_found"))
-  fun stage(n:Int,s:String){if(isStopped)throw CancellationException("cancelled");p.progress=n;p.state=if(n>=100)"READY" else "RENDERING";store.save(p);setProgress(workDataOf(KEY_PROGRESS to n,KEY_STAGE to s));setForegroundAsync(foreground(s,n))}
+  fun stage(n:Int,s:String){if(isStopped)throw CancellationException("cancelled");p.progress=n;p.state=if(n>=100)"READY" else "RENDERING";store.save(p);setProgress(workDataOf(KEY_PROGRESS to n,KEY_STAGE to s));}
   return try{
    require(p.timestampPdfPath?.let{File(it).exists()}==true){"timestamp_script_pdf_missing"};require(p.audioPath?.let{File(it).exists()}==true){"voiceover_missing"};require(p.pdfPath?.let{File(it).exists()}==true){"pdf_missing"}
    p.state="ANALYZING";p.lastError=null;store.save(p);stage(5,"Reading timestamp PDF")
