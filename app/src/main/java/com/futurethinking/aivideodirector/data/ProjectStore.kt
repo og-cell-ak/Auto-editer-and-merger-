@@ -18,15 +18,46 @@ class ProjectStore(private val context: Context) {
         return@synchronized runCatching {
             val text = AtomicFile(indexFile).openRead().bufferedReader(Charsets.UTF_8).use { it.readText() }
             val a=JSONArray(text)
-            buildList{for(i in 0 until a.length())add(fromJson(a.getJSONObject(i)))}.sortedByDescending{it.updatedAt}
+            buildList{for(i in 0 until a.length())add(fromJson(a.getJSONObject(i)))}
+                .also { migrateGenericProjectNames(it) }
+                .sortedByDescending{it.updatedAt}
         }.getOrDefault(emptyList())
     }
 
-    @Synchronized fun create(title:String="Untitled Project"):Project=
-        Project(UUID.randomUUID().toString(),title.ifBlank{"Untitled Project"}).also{
+    @Synchronized fun create(title:String?=null):Project {
+        val existing=readIndex()
+        val normal=existing.filterNot{it.isMerged}
+        val ordinal=(normal.size+1).coerceAtMost(10)
+        val finalTitle=title?.takeIf{it.isNotBlank()} ?: projectOrdinalName(ordinal)
+        return Project(UUID.randomUUID().toString(),finalTitle).also{
+            it.queueRank=(existing.maxOfOrNull{p->p.queueRank}?:System.currentTimeMillis())+1L
             File(rootDir,it.id+"/assets").mkdirs()
             save(it)
         }
+    }
+
+    private fun projectOrdinalName(n:Int)=when(n){
+        1->"First Project";2->"Second Project";3->"Third Project";4->"Fourth Project";5->"Fifth Project"
+        6->"Sixth Project";7->"Seventh Project";8->"Eighth Project";9->"Ninth Project";else->"Tenth Project"
+    }
+
+    private fun migrateGenericProjectNames(projects:List<Project>){
+        val normal=projects.filterNot{it.isMerged}.sortedWith(compareBy<Project>{it.createdAt}.thenBy{it.id})
+        var changed=false
+        normal.forEachIndexed{index,p->
+            if(p.title.isBlank() || p.title.equals("Untitled Project",true) ||
+                p.title.equals("Unknown Project",true) || p.title.equals("Unknown object",true)){
+                p.title=projectOrdinalName(index+1)
+                p.updatedAt=System.currentTimeMillis()
+                changed=true
+            }
+        }
+        if(changed){
+            val out=JSONArray()
+            projects.forEach{out.put(toJson(it))}
+            writeIndexAtomically(out.toString())
+        }
+    }
 
     fun save(p:Project){
         synchronized(ProjectStore::class.java){
