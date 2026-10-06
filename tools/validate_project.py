@@ -16,7 +16,6 @@ required = [
     "app/src/main/java/com/futurethinking/aivideodirector/media/SceneFrameFactory.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/media/VideoRenderer.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/media/MediaExportGate.kt",
-    "app/src/main/java/com/futurethinking/aivideodirector/work/MergeWorker.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/pipeline/AudioDurationReader.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/pipeline/TimestampScriptParser.kt",
@@ -39,7 +38,6 @@ for p in java_root.rglob("*.kt"):
 main = (java_root / "com/futurethinking/aivideodirector/MainActivity.kt").read_text().lower()
 vm = (java_root / "com/futurethinking/aivideodirector/ui/MainViewModel.kt").read_text().lower()
 worker = (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.kt").read_text().lower()
-merge = (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text().lower()
 recovery = (java_root / "com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt").read_text().lower()
 planner = (java_root / "com/futurethinking/aivideodirector/pipeline/TimestampScenePlanner.kt").read_text()
 extractor = (java_root / "com/futurethinking/aivideodirector/media/PdfVisualExtractor.kt").read_text()
@@ -80,12 +78,16 @@ assert 'key_result_state to "error"' in worker
 assert 'android:label="editor and merger"' in manifest
 
 # Merge stability: use Media3 Transformer only. No raw MediaMuxer shortcut.
-assert "fastmp4concatenator" not in all_source.lower()
-assert "import android.media.mediamuxer" not in all_source.lower()
-assert "mediamuxer(" not in all_source.lower()
-assert "awaitExport".lower() in merge
-assert "mediaexportgate.withlock" in merge
-assert "result.retry()" in merge
+# The rendering app must not contain an active merger UI or merger worker.
+assert "mergewoker" not in all_source.lower()
+assert "mergewoker" not in main
+assert "mergevideos" not in main
+assert "importmergevideo" not in vm
+assert "mergeselection" not in vm
+assert "mergeitemsjson" in store  # legacy data remains parseable, but is not executable behavior.
+assert "mediaexportgate.withlock" in renderer
+assert "setforeground(foreground" in worker
+assert "result.retry()" in worker
 
 print("VALIDATION_OK")
 
@@ -95,7 +97,7 @@ assert "progressstage" in store
 assert "setrequiresstoragenotlow" in vm
 assert "mediaexportgate" in (java_root / "com/futurethinking/aivideodirector/media/MediaExportGate.kt").read_text().lower()
 assert "mediaexportgate.withlock" in renderer.lower()
-assert "inspectrenderedfile" in merge
+assert "inspectrenderedfile" in worker
 assert "queuerecoveryreceiver" in manifest
 assert "receive_boot_completed" in manifest
 assert "editor and merger" in (root / "app/src/main/res/values/strings.xml").read_text().lower()
@@ -114,6 +116,8 @@ assert "togglepause" in vm and "cancelproject" in vm
 assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.kt").read_text()
 assert "KEY_SKIPPED".lower() in merge
 assert "post_notifications" in manifest
+assert "request_ignore_battery_optimizations" in manifest
+assert 'android:stopwithtask="false"' in manifest
 assert "requestpermission" not in main
 assert "showbackgroundpermissionnotice" not in vm
 assert "first project" in store and "tenth project" in store
@@ -124,5 +128,5 @@ assert 'android:process=":media"' not in manifest
 assert "remotelistenabledelegatingworker" not in vm
 assert "workmanager.getinstance" in recovery
 assert "runcatching" in recovery
-assert "merging" in recovery
-assert 'queue_version=5' in vm or 'queue_version=5' in vm
+assert "merging" not in recovery
+assert 'queue_version=6' in vm
