@@ -89,7 +89,7 @@ fun EditorApp(
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(if (screen == "projects") "Editor and Merger" else current?.title ?: "Project")
+                        Text(if (screen == "projects") "Video Renderer" else current?.title ?: "Project")
                     },
                     navigationIcon = {
                         if (screen != "projects") {
