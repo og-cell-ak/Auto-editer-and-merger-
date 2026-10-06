@@ -114,7 +114,7 @@ assert "queuerank" in store
 assert "rendernow" in vm and "moveup" in vm and "movedown" in vm
 assert "togglepause" in vm and "cancelproject" in vm
 assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.kt").read_text()
-assert "KEY_SKIPPED" in worker
+assert "key_skipped" in worker
 assert "post_notifications" in manifest
 assert "request_ignore_battery_optimizations" in manifest
 assert 'android:stopwithtask="false"' in manifest
