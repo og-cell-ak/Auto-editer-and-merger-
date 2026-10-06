@@ -63,20 +63,31 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
 
    stage(10,"Extracting yellow-line panels")
    val dir=File(store.assetDir(p),"pdf-visuals")
-   dir.deleteRecursively()
-   var lastExtractionPersistAt=0L
-   var lastExtractionPersistProgress=-1
-   val ex=PdfVisualExtractor(applicationContext).extract(p.pdfPath!!,dir){a,b->
-    if(!isStopped){
-     val now=System.currentTimeMillis()
-     p.progress=a;p.progressStage=b;p.state="ANALYZING"
-     setProgressAsync(workDataOf(KEY_PROGRESS to a,KEY_STAGE to b))
-     if(a>=55 || a-lastExtractionPersistProgress>=2 || now-lastExtractionPersistAt>=1000L){
-      lastExtractionPersistAt=now
-      lastExtractionPersistProgress=a
-      store.save(p)
+   val cachedVisuals=p.visualPaths.filter{java.io.File(it).exists()&&java.io.File(it).length()>2048L}
+   val canReuseCache=p.pdfPageCount>0 && cachedVisuals.isNotEmpty() && cachedVisuals.size==p.visualPaths.size
+   val ex=if(canReuseCache){
+    p.progress=55
+    p.progressStage="Reusing extracted yellow-line panels"
+    p.state="ANALYZING"
+    setProgressAsync(workDataOf(KEY_PROGRESS to 55,KEY_STAGE to p.progressStage))
+    PdfVisualExtractor.Result(p.pdfPageCount,emptyList(),cachedVisuals)
+   }else{
+    dir.deleteRecursively()
+    var lastExtractionPersistAt=0L
+    var lastExtractionPersistProgress=-1
+    val result=PdfVisualExtractor(applicationContext).extract(p.pdfPath!!,dir){a,b->
+     if(!isStopped){
+      val now=System.currentTimeMillis()
+      p.progress=a;p.progressStage=b;p.state="ANALYZING"
+      setProgressAsync(workDataOf(KEY_PROGRESS to a,KEY_STAGE to b))
+      if(a>=55 || a-lastExtractionPersistProgress>=2 || now-lastExtractionPersistAt>=1000L){
+       lastExtractionPersistAt=now
+       lastExtractionPersistProgress=a
+       store.save(p)
+      }
      }
     }
+    result
    }
    require(ex.visualPaths.isNotEmpty()){"pdf_extraction_failed"}
    p.pdfPageCount=ex.pageCount
