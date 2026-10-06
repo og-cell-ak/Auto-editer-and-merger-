@@ -97,7 +97,7 @@ fun EditorApp(
 @Composable
 fun ProjectList(projects: List<Project>, onOpen: (Project) -> Unit) {
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Text("Up to 10 projects can render independently in the background.") }
+        item { Text("Up to 10 projects can be queued. Rendering runs one heavy media job at a time for stability.") }
         items(projects, key = { it.id }) { project ->
             Card(onClick = { onOpen(project) }, modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -144,9 +144,6 @@ fun EditorScreen(
                     if (project.progress > 0) {
                         LinearProgressIndicator(progress = { project.progress / 100f }, modifier = Modifier.fillMaxWidth())
                         Text(project.progress.toString() + "%")
-                    }
-                    if (project.analysisReport != null) {
-                        Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp)) { Text("File analysis", style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(6.dp)); Text(project.analysisReport!!) } }
                     }
                     if (project.analysisReport != null) {
                         Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp)) { Text("File analysis", style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(6.dp)); Text(project.analysisReport!!) } }
