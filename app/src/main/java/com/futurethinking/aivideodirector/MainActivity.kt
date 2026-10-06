@@ -148,6 +148,9 @@ fun EditorScreen(
                     if (project.analysisReport != null) {
                         Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp)) { Text("File analysis", style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(6.dp)); Text(project.analysisReport!!) } }
                     }
+                    if (project.analysisReport != null) {
+                        Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp)) { Text("File analysis", style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(6.dp)); Text(project.analysisReport!!) } }
+                    }
                     if (project.outputPath != null && project.state == "READY") {
                         Button(onClick = { onExport(project) }, modifier = Modifier.fillMaxWidth()) { Text("Export video") }
                     }
