@@ -39,6 +39,8 @@ worker = (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.
 planner = (java_root / "com/futurethinking/aivideodirector/pipeline/TimestampScenePlanner.kt").read_text()
 extractor = (java_root / "com/futurethinking/aivideodirector/media/PdfVisualExtractor.kt").read_text()
 renderer = (java_root / "com/futurethinking/aivideodirector/media/VideoRenderer.kt").read_text()
+store = (java_root / "com/futurethinking/aivideodirector/data/ProjectStore.kt").read_text().lower()
+vm = (java_root / "com/futurethinking/aivideodirector/ui/MainViewModel.kt").read_text().lower()
 
 assert "opendocument" in main and "importpdf" in vm and "importtimestamppdf" in vm and "importaudio" in vm
 assert "paste your timestamped script" not in main
