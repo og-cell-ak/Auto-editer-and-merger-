@@ -21,7 +21,10 @@ object QueueRecovery {
         val store = ProjectStore(app)
         val wm = runCatching { WorkManager.getInstance(app) }.getOrNull() ?: return
         val projects = store.list()
-            .filter { it.state == "QUEUED" || it.state == "ANALYZING" || it.state == "RENDERING" }
+            .filter {
+                it.state == "QUEUED" || it.state == "ANALYZING" ||
+                it.state == "RENDERING" || it.state == "MERGING"
+            }
             .sortedWith(compareBy<Project> { it.queueRank }.thenBy { it.createdAt }.thenBy { it.updatedAt })
 
         val active = runCatching {
@@ -30,8 +33,9 @@ object QueueRecovery {
 
         if (active || projects.isEmpty()) return
 
-        // Rebuild only the durable pending chain. WorkManager persists this chain
-        // across process death and normally across device reboot as well.
+        // Rebuild the durable pending chain, including an interrupted merge.
+        // WorkManager persists the chain across process death and normally
+        // across device reboot as well.
         projects.forEach { project ->
             val request = if (project.isMerged) {
                 OneTimeWorkRequestBuilder<MergeWorker>()
