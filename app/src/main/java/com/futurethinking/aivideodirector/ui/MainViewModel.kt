@@ -181,7 +181,10 @@ class MainViewModel(app:Application):AndroidViewModel(app){
     if(info.state==WorkInfo.State.CANCELLED&&target.state!="READY"&&target.state!="ERROR"&&target.state!="PAUSED"&&target.state!="CANCELLED"){
      target.state="QUEUED";target.progress=1;target.progressStage="Queued for recovery"
     }
-    store.save(target)
+    val terminal = info.state == WorkInfo.State.SUCCEEDED ||
+     info.state == WorkInfo.State.FAILED ||
+     info.state == WorkInfo.State.CANCELLED
+    if(terminal) store.save(target)
     if(_current.value?.id==projectId)_current.value=target
     refresh()
    }
