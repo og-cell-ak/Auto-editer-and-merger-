@@ -22,6 +22,8 @@ import com.futurethinking.aivideodirector.work.MergeWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -36,6 +38,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
  val error=_error.asStateFlow()
  private val _merge=MutableStateFlow<List<String>>(emptyList())
  val mergeSelection=_merge.asStateFlow()
+ private val reconcileMutex=Mutex()
 
  init{
   viewModelScope.launch{
@@ -97,6 +100,9 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   if(store.availableStorageBytes()<MIN_FREE_STORAGE_BYTES){
    _error.value="Storage is too low for a safe render. Free at least 500 MB and try again.";return
   }
+  if(p.state=="QUEUED"||p.state=="ANALYZING"||p.state=="RENDERING"||p.state=="MERGING"){
+   _error.value="This project is already queued or rendering.";return
+  }
   p.state="QUEUED";p.progress=1;p.progressStage="Queued";if(p.queueRank<=0)p.queueRank=System.currentTimeMillis();p.lastError=null;store.save(p)
   val req=generationRequest(p)
   enqueueMediaWork(req);observe(req.id,p.id);refresh()
@@ -126,6 +132,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
 
  private fun reconcileQueue(){
   viewModelScope.launch(Dispatchers.IO){
+   reconcileMutex.withLock{
    val prefs=getApplication<Application>().getSharedPreferences(PREFS_NAME,0)
    var ps=store.list()
    val migration=prefs.getInt(QUEUE_VERSION_KEY,0)<QUEUE_VERSION
@@ -142,6 +149,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
      .forEach{enqueueMediaWork(if(it.isMerged)mergeRequest(it)else generationRequest(it))}
    }
    _projects.value=store.list()
+   }
   }
  }
 
@@ -233,7 +241,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   private const val MERGE_TAG="editor-merge"
   private const val PREFS_NAME="editor-and-merger-settings"
   private const val QUEUE_VERSION_KEY="media_queue_version"
-  private const val QUEUE_VERSION=3
+  private const val QUEUE_VERSION=4
   private const val MIN_FREE_STORAGE_BYTES=500L*1024L*1024L
  }
 }
