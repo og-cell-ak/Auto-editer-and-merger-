@@ -10,7 +10,8 @@ import kotlin.math.roundToLong
 class TimestampScenePlanner {
     data class Result(
         val scenes: List<ScenePlan>,
-        val frameToleranceMs: Long
+        val frameToleranceMs: Long,
+        val diagnostics: List<String> = emptyList()
     )
 
     fun plan(
@@ -30,6 +31,7 @@ class TimestampScenePlanner {
         val fps = preferences.fps.coerceIn(24, 60)
         val frameTolerance = (1000.0 / fps / 2.0).roundToLong().coerceAtLeast(1L)
         val scenes = mutableListOf<ScenePlan>()
+        val diagnostics = mutableListOf<String>()
         var cursor = 0L
 
         fun addBlack(start: Long, end: Long) {
@@ -52,9 +54,15 @@ class TimestampScenePlanner {
         var visualSceneIndex = 0
 
         markers.forEachIndexed { index, marker ->
-            require(marker.startMs < audioDurationMs) {
-                "Timestamp " + formatMs(marker.startMs) +
-                    " is outside the audio duration " + formatMs(audioDurationMs) + "."
+            if (marker.startMs >= audioDurationMs) {
+                val delta = marker.startMs - audioDurationMs
+                if (delta <= MAX_MISMATCH_MS && index == markers.lastIndex) {
+                    diagnostics += "Timestamp " + formatMs(marker.startMs) + " is " + formatMs(delta) + " beyond audio. Corrected by ignoring the final out-of-range marker."
+                    return@forEachIndexed
+                }
+                require(delta <= MAX_MISMATCH_MS) {
+                    "Timestamp " + formatMs(marker.startMs) + " is " + formatMs(delta) + " beyond audio. This exceeds the allowed 5 second correction window."
+                }
             }
 
             val start = snapToFrame(marker.startMs, fps).coerceIn(0L, audioDurationMs)
@@ -68,8 +76,15 @@ class TimestampScenePlanner {
             require(requestedEnd > marker.startMs) {
                 "Timestamp duration is empty near " + marker.raw
             }
-            require(requestedEnd <= audioDurationMs) {
-                "Timestamp end " + formatMs(requestedEnd) + " is outside the audio duration."
+            if (requestedEnd > audioDurationMs) {
+                val delta = requestedEnd - audioDurationMs
+                require(delta <= MAX_MISMATCH_MS) {
+                    "Timestamp end " + formatMs(requestedEnd) + " is " + formatMs(delta) + " beyond audio. This exceeds the allowed 5 second correction window."
+                }
+                diagnostics += "Timestamp end " + formatMs(requestedEnd) + " exceeds audio by " + formatMs(delta) + ". Corrected to audio end " + formatMs(audioDurationMs) + "."
+            } else if (requestedEnd < audioDurationMs && index == markers.lastIndex && explicitEnd == null) {
+                val delta = audioDurationMs - requestedEnd
+                if (delta <= MAX_MISMATCH_MS) diagnostics += "Timestamp timeline ends " + formatMs(delta) + " before audio. Corrected by padding the final " + formatMs(delta) + " with the timeline audio."
             }
 
             val end = snapToFrame(requestedEnd, fps).coerceIn(0L, audioDurationMs)
@@ -122,7 +137,7 @@ class TimestampScenePlanner {
             scene.copy(id = idx)
         }
         validate(normalized, audioDurationMs, orderedPdfVisuals, frameTolerance)
-        return Result(normalized, frameTolerance)
+        return Result(normalized, frameTolerance, diagnostics.distinct())
     }
 
     private fun validate(
@@ -163,6 +178,8 @@ class TimestampScenePlanner {
     private fun snapToFrame(ms: Long, fps: Int): Long =
         (ms.toDouble() * fps / 1000.0).roundToLong()
             .let { frames -> (frames.toDouble() * 1000.0 / fps).roundToLong() }
+
+    companion object { const val MAX_MISMATCH_MS = 5000L }
 
     private fun formatMs(ms: Long): String {
         val minutes = ms / 60000L
