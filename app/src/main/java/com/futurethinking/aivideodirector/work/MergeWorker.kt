@@ -79,6 +79,15 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
    Result.success()
   }catch(t:Throwable){
    if(t is CancellationException)throw t
+   val transient=t is java.io.IOException ||
+     t is ExportException ||
+     (t is IllegalStateException && !t.message.orEmpty().contains("project_output_missing")) 
+   if(transient && runAttemptCount < 3){
+    p.state="QUEUED";p.progress=maxOf(1,p.progress);p.progressStage="Retrying merge after temporary media issue"
+    p.lastError="Temporary merge/media issue. Android will retry automatically."
+    store.save(p)
+    return Result.retry()
+   }
    p.state="ERROR";p.progress=0;p.progressStage="Failed";p.lastError=t.message?:t.javaClass.simpleName;store.save(p)
    Result.success(workDataOf(KEY_RESULT_STATE to "ERROR",KEY_ERROR to (p.lastError?:"merge_failed")))
   }
