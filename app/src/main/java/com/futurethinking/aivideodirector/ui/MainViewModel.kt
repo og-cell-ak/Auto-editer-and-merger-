@@ -145,7 +145,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
    var ps=store.list()
    val migration=prefs.getInt(QUEUE_VERSION_KEY,0)<QUEUE_VERSION
    if(migration){
-    ps.forEach{manager.cancelUniqueWork("generate-"+it.id);manager.cancelUniqueWork("merge-"+it.id)}
+    ps.filter{!it.isMerged}.forEach{manager.cancelUniqueWork("generate-"+it.id)}
     ps.filter{isPendingState(it.state)}.forEach{it.state="QUEUED";it.progress=1;it.progressStage="Queued after recovery";store.save(it)}
     prefs.edit().putInt(QUEUE_VERSION_KEY,QUEUE_VERSION).commit()
     ps=store.list()
@@ -229,7 +229,6 @@ class MainViewModel(app:Application):AndroidViewModel(app){
  companion object{
   const val MEDIA_QUEUE_NAME="editor-and-merger-media-queue"
   private const val GENERATION_TAG="editor-generation"
-  private const val MERGE_TAG="editor-merge"
   private const val PREFS_NAME="editor-and-merger-settings"
   private const val QUEUE_VERSION_KEY="media_queue_version"
   private const val QUEUE_VERSION=5
