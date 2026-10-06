@@ -19,6 +19,9 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
   val store=ProjectStore(applicationContext)
   val p=store.list().firstOrNull{it.id==id}
    ?:return Result.failure(workDataOf(KEY_ERROR to "project_not_found"))
+  if(p.state=="PAUSED"||p.state=="CANCELLED") return Result.success(workDataOf(KEY_SKIPPED to true))
+  val next=store.list().filter{it.state=="QUEUED"}.minByOrNull{it.queueRank}
+  if(next!=null&&next.id!=p.id) return Result.success(workDataOf(KEY_SKIPPED to true))
 
   suspend fun stage(n:Int,s:String){
    if(isStopped)throw CancellationException("cancelled")
@@ -189,6 +192,7 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
   const val KEY_STAGE="stage"
   const val KEY_ERROR="error"
   const val KEY_RESULT_STATE="result_state"
+  const val KEY_SKIPPED="skipped"
   private const val MIN_FREE_STORAGE_BYTES=500L*1024L*1024L
  }
 }
