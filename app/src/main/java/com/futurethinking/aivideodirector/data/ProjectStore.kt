@@ -13,9 +13,13 @@ class ProjectStore(private val context: Context) {
     private val rootDir=File(context.filesDir,"projects").apply{mkdirs()}
     private val indexFile=File(rootDir,"index.json")
 
-    @Synchronized fun list():List<Project>{
-        if(!indexFile.exists()) return emptyList()
-        return runCatching{val a=JSONArray(indexFile.readText());buildList{for(i in 0 until a.length())add(fromJson(a.getJSONObject(i)))}.sortedByDescending{it.updatedAt}}.getOrDefault(emptyList())
+    fun list():List<Project> = synchronized(ProjectStore::class.java) {
+        if(!indexFile.exists()) return@synchronized emptyList()
+        return@synchronized runCatching {
+            val text = AtomicFile(indexFile).openRead().bufferedReader(Charsets.UTF_8).use { it.readText() }
+            val a=JSONArray(text)
+            buildList{for(i in 0 until a.length())add(fromJson(a.getJSONObject(i)))}.sortedByDescending{it.updatedAt}
+        }.getOrDefault(emptyList())
     }
 
     @Synchronized fun create(title:String="Untitled Project"):Project=
@@ -38,7 +42,9 @@ class ProjectStore(private val context: Context) {
     private fun readIndex():List<Project>{
         if(!indexFile.exists()) return emptyList()
         return runCatching{
-            val a=JSONArray(indexFile.readText())
+            if(!indexFile.exists()) return@runCatching emptyList()
+            val text = AtomicFile(indexFile).openRead().bufferedReader(Charsets.UTF_8).use { it.readText() }
+            val a=JSONArray(text)
             buildList{for(i in 0 until a.length())add(fromJson(a.getJSONObject(i)))}
         }.getOrDefault(emptyList())
     }
@@ -52,7 +58,7 @@ class ProjectStore(private val context: Context) {
             stream.flush()
             atomic.finishWrite(stream)
         }catch(t:Throwable){
-            atomic.failWrite(stream)
+            if(stream != null) atomic.failWrite(stream)
             throw t
         }
     }
