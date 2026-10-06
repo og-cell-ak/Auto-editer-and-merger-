@@ -183,7 +183,7 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
    .setSmallIcon(android.R.drawable.ic_media_play)
    .setOnlyAlertOnce(true).setOngoing(true)
    .setProgress(100,n.coerceIn(0,100),false).build()
-  return ForegroundInfo(1001,no,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROCESSING)
+  return ForegroundInfo(1001,no,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
  }
 
  companion object{
