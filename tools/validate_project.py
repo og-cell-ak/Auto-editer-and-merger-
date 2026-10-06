@@ -112,7 +112,7 @@ assert "queuerank" in store
 assert "rendernow" in vm and "moveup" in vm and "movedown" in vm
 assert "togglepause" in vm and "cancelproject" in vm
 assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.kt").read_text()
-assert "KEY_SKIPPED" in merge
+assert "KEY_SKIPPED".lower() in merge
 assert "post_notifications" in manifest
 assert "requestpermission" not in main
 assert "showbackgroundpermissionnotice" not in vm
