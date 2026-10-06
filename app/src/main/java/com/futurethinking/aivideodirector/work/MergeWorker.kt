@@ -37,6 +37,7 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
   }
 
   return try{
+   setForeground(foreground("Preparing merge",1))
    stage(5,"Preparing merge")
    val raw=JSONArray(p.mergeItemsJson?:"[]")
    val paths=mutableListOf<String>()
