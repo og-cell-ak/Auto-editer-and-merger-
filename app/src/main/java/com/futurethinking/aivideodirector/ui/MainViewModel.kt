@@ -39,7 +39,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
 
  init{
   viewModelScope.launch{
-   wm.getWorkInfosForUniqueWorkFlow(MEDIA_QUEUE_NAME).collectLatest{refresh()}
+   wm.getWorkInfosForUniqueWorkFlow(MEDIA_QUEUE_NAME).collectLatest{info->refresh();if(info.none{!it.state.isFinished})reconcileQueue()}
   }
   reconcileQueue()
  }
