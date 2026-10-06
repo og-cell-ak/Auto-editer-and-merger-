@@ -12,6 +12,7 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.Data
 import androidx.work.workDataOf
 import com.futurethinking.aivideodirector.data.Project
 import com.futurethinking.aivideodirector.data.ProjectStore
@@ -19,6 +20,9 @@ import com.futurethinking.aivideodirector.pipeline.PdfTimestampScriptReader
 import com.futurethinking.aivideodirector.pipeline.TimestampScriptParser
 import com.futurethinking.aivideodirector.work.GenerationWorker
 import com.futurethinking.aivideodirector.work.MergeWorker
+import androidx.work.multiprocess.RemoteListenableDelegatingWorker
+import androidx.work.multiprocess.RemoteListenableWorker
+import androidx.work.multiprocess.RemoteWorkerService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -59,10 +63,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   reconcileQueue()
  }
 
- fun showBackgroundPermissionNotice(){
-  _error.value="Android notifications are disabled. Allow notifications for reliable background progress updates while rendering or merging."
- }
- fun refresh(){viewModelScope.launch(Dispatchers.IO){_projects.value=sortForQueue(store.list())}}
+  fun refresh(){viewModelScope.launch(Dispatchers.IO){_projects.value=sortForQueue(store.list())}}
  private fun sortForQueue(list:List<Project>)=list.sortedWith(compareBy<Project>{if(it.isMerged&&it.state=="IMPORT")Long.MAX_VALUE else if(it.state=="QUEUED"||it.state=="PAUSED"||it.state=="ANALYZING"||it.state=="RENDERING"||it.state=="MERGING")0 else 1}.thenBy{if(it.queueRank>0)it.queueRank else it.createdAt}.thenByDescending{it.updatedAt})
  fun createProject(){
   if(store.list().count{!it.isMerged}<10)_current.value=store.create().also{it.queueRank=(store.list().maxOfOrNull{p->p.queueRank}?:System.currentTimeMillis())+1;store.save(it)}
@@ -131,8 +132,13 @@ class MainViewModel(app:Application):AndroidViewModel(app){
    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,10,TimeUnit.SECONDS).build()
 
  private fun mergeRequest(p:Project):OneTimeWorkRequest=
-  OneTimeWorkRequestBuilder<MergeWorker>()
-   .setInputData(workDataOf(MergeWorker.KEY_PROJECT_ID to p.id))
+  OneTimeWorkRequestBuilder<RemoteListenableDelegatingWorker>()
+   .setInputData(Data.Builder()
+    .putString(RemoteListenableWorker.ARGUMENT_PACKAGE_NAME,getApplication<Application>().packageName)
+    .putString(RemoteListenableWorker.ARGUMENT_CLASS_NAME,RemoteWorkerService::class.java.name)
+    .putString(RemoteListenableDelegatingWorker.ARGUMENT_REMOTE_LISTENABLE_WORKER_NAME,MergeWorker::class.java.name)
+    .putString(MergeWorker.KEY_PROJECT_ID,p.id)
+    .build())
    .addTag(MERGE_TAG)
    .setConstraints(storageConstraints())
    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL,10,TimeUnit.SECONDS).build()
@@ -148,7 +154,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
    .onFailure{_error.value="Could not start background rendering: "+(it.message?:it.javaClass.simpleName)}
  }
 
- private fun isPendingState(s:String)=s=="QUEUED"||s=="ANALYZING"||s=="RENDERING"||s=="MERGING"
+ private fun isPendingState(s:String)=s=="QUEUED"||s=="ANALYZING"||s=="RENDERING"
 
  private fun reconcileQueue(){
   viewModelScope.launch(Dispatchers.IO){

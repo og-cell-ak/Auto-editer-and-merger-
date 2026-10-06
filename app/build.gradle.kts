@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.futurethinking.mobileautomation.final20261002"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
@@ -64,7 +64,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
-    implementation("androidx.work:work-runtime-ktx:2.11.2")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
+    implementation("androidx.work:work-multiprocess:2.12.0")
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
     implementation("androidx.compose.ui:ui")

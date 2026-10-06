@@ -1,10 +1,7 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.futurethinking.aivideodirector
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,17 +28,8 @@ class MainActivity : ComponentActivity() {
     private val vid = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { vm.importMergeVideo(it) { path -> vm.addMergeItem("video:" + path) } }
     }
-    private val notificationPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (!granted) vm.showBackgroundPermissionNotice()
-        }
-
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
         setContent {
             EditorApp(vm, audio, pdf, ts, vid) { project ->
                 vm.shareOutput(project)?.let { startActivity(Intent.createChooser(it, "Export video")) }

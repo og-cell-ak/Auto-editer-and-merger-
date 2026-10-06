@@ -27,7 +27,8 @@ class ProjectStore(private val context: Context) {
     @Synchronized fun create(title:String?=null):Project {
         val existing=readIndex()
         val normal=existing.filterNot{it.isMerged}
-        val ordinal=(normal.size+1).coerceAtMost(10)
+        require(normal.size<10){"Maximum 10 projects reached."}
+        val ordinal=normal.size+1
         val finalTitle=title?.takeIf{it.isNotBlank()} ?: projectOrdinalName(ordinal)
         return Project(UUID.randomUUID().toString(),finalTitle).also{
             it.queueRank=(existing.maxOfOrNull{p->p.queueRank}?:System.currentTimeMillis())+1L

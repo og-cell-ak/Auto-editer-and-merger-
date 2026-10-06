@@ -21,7 +21,7 @@ object QueueRecovery {
         val store = ProjectStore(app)
         val wm = runCatching { WorkManager.getInstance(app) }.getOrNull() ?: return
         val projects = store.list()
-            .filter { it.state == "QUEUED" || it.state == "ANALYZING" || it.state == "RENDERING" || it.state == "MERGING" }
+            .filter { it.state == "QUEUED" || it.state == "ANALYZING" || it.state == "RENDERING" }
             .sortedWith(compareBy<Project> { it.queueRank }.thenBy { it.createdAt }.thenBy { it.updatedAt })
 
         val active = runCatching {

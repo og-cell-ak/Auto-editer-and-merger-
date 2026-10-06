@@ -6,6 +6,7 @@ import androidx.core.app.NotificationCompat
 import androidx.media3.common.*
 import androidx.media3.transformer.*
 import androidx.work.*
+import androidx.work.multiprocess.RemoteCoroutineWorker
 import com.futurethinking.aivideodirector.data.ProjectStore
 import com.futurethinking.aivideodirector.media.MediaExportGate
 import com.futurethinking.aivideodirector.pipeline.QualityControl
@@ -16,8 +17,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import org.json.JSONArray
 
-class MergeWorker(appContext:android.content.Context,params:WorkerParameters):CoroutineWorker(appContext,params){
- override suspend fun doWork():Result{
+class MergeWorker(appContext:android.content.Context,params:WorkerParameters):RemoteCoroutineWorker(appContext,params){
+ override suspend fun doRemoteWork():Result{
   val id=inputData.getString(KEY_PROJECT_ID)?:return Result.failure(workDataOf(KEY_ERROR to "missing_project_id"))
   val store=ProjectStore(applicationContext)
   val p=store.list().firstOrNull{it.id==id}?:return Result.failure(workDataOf(KEY_ERROR to "merge_project_not_found"))
@@ -65,7 +66,10 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
 
    stage(12,"Merging videos")
    MediaExportGate.withLock{
-    awaitExport(items,temp){n->stage(12+(n*86/100),"Merging videos")}
+    val direct=FastMp4Concatenator.tryConcatenate(paths,temp){n->stage(12+(n*86/100),"Merging videos")}
+    if(!direct){
+     awaitExport(items,temp){n->stage(12+(n*86/100),"Merging videos")}
+    }
    }
 
    require(temp.exists()&&temp.length()>8192L){"merge_output_invalid"}
