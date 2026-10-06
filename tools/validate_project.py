@@ -112,3 +112,11 @@ assert "rendernow" in vm and "moveup" in vm and "movedown" in vm
 assert "togglepause" in vm and "cancelproject" in vm
 assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/GenerationWorker.kt").read_text()
 assert "KEY_SKIPPED" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text()
+assert "post_notifications" in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
+assert "requestpermission" in main
+assert "showbackgroundpermissionnotice" in (java_root / "com/futurethinking/aivideodirector/ui/MainViewModel.kt").read_text().lower()
+assert "first project" in store and "tenth project" in store
+assert "migrategenericprojectnames" in store
+assert "result.retry()" in (java_root / "com/futurethinking/aivideodirector/work/MergeWorker.kt").read_text().lower()
+assert "workmanager.getinstance" in (java_root / "com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt").read_text().lower()
+assert "runCatching" in (java_root / "com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt").read_text()
