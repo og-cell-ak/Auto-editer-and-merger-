@@ -12,7 +12,7 @@ import org.json.JSONArray
 class MergeWorker(appContext:android.content.Context,params:WorkerParameters):CoroutineWorker(appContext,params){
  override suspend fun doWork():Result{
   val id=inputData.getString(KEY_PROJECT_ID)?:return Result.failure(workDataOf(KEY_ERROR to "missing_project_id"));val store=ProjectStore(applicationContext);val p=store.list().firstOrNull{it.id==id}?:return Result.failure(workDataOf(KEY_ERROR to "merge_project_not_found"))
-  fun stage(n:Int,s:String){p.progress=n;p.state=if(n>=100)"READY" else "MERGING";store.save(p);setProgress(workDataOf(KEY_PROGRESS to n,KEY_STAGE to s));}
+  fun stage(n:Int,s:String){p.progress=n;p.state=if(n>=100)"READY" else "MERGING";store.save(p);setProgressAsync(workDataOf(KEY_PROGRESS to n,KEY_STAGE to s));}
   return try{
    stage(5,"Preparing merge");val raw=JSONArray(p.mergeItemsJson?:"[]");val paths=mutableListOf<String>()
    for(i in 0 until raw.length()){val token=raw.getString(i);if(token.startsWith("project:")){val id2=token.removePrefix("project:");val q=store.list().firstOrNull{it.id==id2};require(q?.outputPath?.let{File(it).exists()}==true){"project_output_missing"};paths+=q!!.outputPath!!}else if(token.startsWith("video:")){val f=File(token.removePrefix("video:"));require(f.exists()){"imported_video_missing"};paths+=f.absolutePath}}
