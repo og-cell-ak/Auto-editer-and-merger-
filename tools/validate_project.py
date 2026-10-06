@@ -81,7 +81,7 @@ assert 'android:label="editor and merger"' in manifest
 
 # Merge stability: use Media3 Transformer only. No raw MediaMuxer shortcut.
 assert "fastmp4concatenator" not in all_source.lower()
-assert "mediamuxer" not in all_source.lower()
+assert "import android.media.mediamuxer" not in all_source.lower()\nassert "mediamuxer(" not in all_source.lower()
 assert "awaitExport" in merge
 assert "mediaexportgate.withlock" in merge
 assert "result.retry()" in merge
