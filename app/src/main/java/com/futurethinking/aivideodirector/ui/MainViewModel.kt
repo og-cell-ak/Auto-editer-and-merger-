@@ -59,6 +59,9 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   reconcileQueue()
  }
 
+ fun showBackgroundPermissionNotice(){
+  _error.value="Android notifications are disabled. Allow notifications for reliable background progress updates while rendering or merging."
+ }
  fun refresh(){viewModelScope.launch(Dispatchers.IO){_projects.value=sortForQueue(store.list())}}
  private fun sortForQueue(list:List<Project>)=list.sortedWith(compareBy<Project>{if(it.isMerged&&it.state=="IMPORT")Long.MAX_VALUE else if(it.state=="QUEUED"||it.state=="PAUSED"||it.state=="ANALYZING"||it.state=="RENDERING"||it.state=="MERGING")0 else 1}.thenBy{if(it.queueRank>0)it.queueRank else it.createdAt}.thenByDescending{it.updatedAt})
  fun createProject(){
