@@ -29,7 +29,7 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
    val qc=QualityControl.inspectTimeline(plan.scenes,audio,ex.visualPaths,plan.frameToleranceMs);require(qc.ok){qc.issues.joinToString("|")+"\n"+report}
    p.durationMs=audio;p.scenePlanJson=JSONArray(plan.scenes.map{JSONObject().apply{put("id",it.id);put("startMs",it.startMs);put("endMs",it.endMs);put("visualPath",it.visualPath);put("pdfOrdinal",it.pdfOrdinal);put("motionDirection",it.motionDirection?.name)}}).toString()
    stage(72,"Rendering video");val out=File(store.outputDir(p),p.title.replace(Regex("[^A-Za-z0-9._-]+"),"_").take(48).ifBlank{"AI_Video"}+".mp4")
-   VideoRenderer(applicationContext).render(plan.scenes,p.audioPath,p.preferences,out){n->stage(n,"Rendering video")};require(QualityControl.inspectRenderedFile(out,audio,true)==null){"output_validation_failed. See analysis report for timeline/audio details."};p.outputPath=out.absolutePath;p.state="READY";p.progress=100;store.save(p);stage(100,"Video ready");Result.success()
+   VideoRenderer(applicationContext).render(plan.scenes,p.audioPath,p.preferences,out){n->if(!isStopped){p.progress=n;p.state="RENDERING";store.save(p);setProgressAsync(workDataOf(KEY_PROGRESS to n,KEY_STAGE to "Rendering video"))}};require(QualityControl.inspectRenderedFile(out,audio,true)==null){"output_validation_failed. See analysis report for timeline/audio details."};p.outputPath=out.absolutePath;p.state="READY";p.progress=100;store.save(p);stage(100,"Video ready");Result.success()
   }catch(t:Throwable){
    if(t is CancellationException){p.state="CANCELLED";store.save(p);throw t}
    val transientFailure=t is java.io.IOException || t is androidx.media3.transformer.ExportException || t is IllegalStateException
