@@ -1,0 +1,39 @@
+name: Build AI Universal Auto Editor Pro
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.3.1"
+      - name: Validate source
+        run: python3 tools/validate_project.py
+      - name: Create CI signing key
+        run: |
+          keytool -genkeypair -v -keystore app/ci-release.p12 -storetype PKCS12 -alias ai-universal-auto-editor-pro -keyalg RSA -keysize 2048 -validity 10000 -storepass changeit -keypass changeit -dname "CN=AI Universal Auto Editor Pro, OU=Mobile, O=Personal, L=India, ST=Haryana, C=IN"
+      - name: Build signed release APK
+        run: |
+          gradle --no-daemon --stacktrace test assembleRelease             -PreleaseKeystore=app/ci-release.p12             -PreleaseStorePassword=changeit             -PreleaseKeyAlias=ai-universal-auto-editor-pro             -PreleaseKeyPassword=changeit
+      - name: Verify APK
+        run: |
+          APK=$(ls app/build/outputs/apk/release/*.apk | head -1)
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          unzip -tq "$APK"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-universal-auto-editor-pro-final
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
