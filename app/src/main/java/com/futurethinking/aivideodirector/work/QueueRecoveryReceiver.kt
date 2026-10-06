@@ -22,8 +22,9 @@ object QueueRecovery {
         val wm = runCatching { WorkManager.getInstance(app) }.getOrNull() ?: return
         val projects = store.list()
             .filter {
-                it.state == "QUEUED" || it.state == "ANALYZING" ||
-                it.state == "RENDERING" || it.state == "MERGING"
+                !it.isMerged &&
+                (it.state == "QUEUED" || it.state == "ANALYZING" ||
+                it.state == "RENDERING")
             }
             .sortedWith(compareBy<Project> { it.queueRank }.thenBy { it.createdAt }.thenBy { it.updatedAt })
 
@@ -33,25 +34,17 @@ object QueueRecovery {
 
         if (active || projects.isEmpty()) return
 
-        // Rebuild the durable pending chain, including an interrupted merge.
+        // Rebuild the durable rendering chain after process or device recovery.
         // WorkManager persists the chain across process death and normally
         // across device reboot as well.
         projects.forEach { project ->
-            val request = if (project.isMerged) {
-                OneTimeWorkRequestBuilder<MergeWorker>()
-                    .setInputData(workDataOf(MergeWorker.KEY_PROJECT_ID to project.id))
-                    .addTag("editor-merge")
-                    .setConstraints(Constraints.Builder().setRequiresStorageNotLow(true).build())
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
-                    .build()
-            } else {
+            val request =
                 OneTimeWorkRequestBuilder<GenerationWorker>()
                     .setInputData(workDataOf(GenerationWorker.KEY_PROJECT_ID to project.id))
                     .addTag("editor-generation")
                     .setConstraints(Constraints.Builder().setRequiresStorageNotLow(true).build())
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
                     .build()
-            }
             runCatching {
                 wm.beginUniqueWork(QUEUE_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request).enqueue()
             }.onFailure {
