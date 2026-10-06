@@ -23,7 +23,8 @@ data class Project(
     var outputPath: String? = null, var state: String = "DRAFT", var lastError: String? = null,
     var scenePlanJson: String? = null, var progress: Int = 0,
     var isMerged: Boolean = false, var mergeItemsJson: String? = null, var analysisReport: String? = null,
-    var progressStage: String = ""
+    var progressStage: String = "",
+    var queueRank: Long = System.currentTimeMillis()
 )
 data class TimestampMarker(val startMs: Long, val explicitEndMs: Long?, val body: String, val raw: String)
 data class ScenePlan(
