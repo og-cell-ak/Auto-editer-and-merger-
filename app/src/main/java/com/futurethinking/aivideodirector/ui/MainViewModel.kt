@@ -153,6 +153,8 @@ class MainViewModel(app:Application):AndroidViewModel(app){
     target.progress=info.progress.getInt(GenerationWorker.KEY_PROGRESS,target.progress)
     target.progressStage=info.progress.getString(GenerationWorker.KEY_STAGE)?:target.progressStage
     if(info.state==WorkInfo.State.SUCCEEDED){
+     val skipped=info.outputData.getBoolean(GenerationWorker.KEY_SKIPPED,false)
+     if(skipped){ target.progressStage=if(target.state=="PAUSED")"Paused" else "Waiting for priority"; store.save(target); if(_current.value?.id==projectId)_current.value=target; refresh(); return@collectLatest }
      val resultState=info.outputData.getString(GenerationWorker.KEY_RESULT_STATE)
      if(resultState=="ERROR"){
       target.state="ERROR";target.progress=0
