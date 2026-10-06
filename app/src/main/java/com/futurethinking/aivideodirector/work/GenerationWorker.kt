@@ -31,13 +31,13 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
    stage(72,"Rendering video");val out=File(store.outputDir(p),p.title.replace(Regex("[^A-Za-z0-9._-]+"),"_").take(48).ifBlank{"AI_Video"}+".mp4")
    VideoRenderer(applicationContext).render(plan.scenes,p.audioPath,p.preferences,out){n->if(!isStopped){p.progress=n;p.state="RENDERING";store.save(p);setProgressAsync(workDataOf(KEY_PROGRESS to n,KEY_STAGE to "Rendering video"))}};require(QualityControl.inspectRenderedFile(out,audio,true)==null){"output_validation_failed. See analysis report for timeline/audio details."};p.outputPath=out.absolutePath;p.state="READY";p.progress=100;store.save(p);stage(100,"Video ready");Result.success()
   }catch(t:Throwable){
-   if(t is CancellationException){p.state="CANCELLED";store.save(p);throw t}
+   if(t is CancellationException){throw t}
    val transientFailure=t is java.io.IOException || t is androidx.media3.transformer.ExportException || t is IllegalStateException
    if(transientFailure && runAttemptCount < 2){
       p.state="QUEUED";p.progress=1;p.lastError="Temporary renderer/codec issue. WorkManager will retry automatically.";store.save(p)
       return Result.retry()
    }
-   p.state="ERROR";p.progress=0;p.lastError=t.message?:t.javaClass.simpleName;store.save(p);Result.failure(workDataOf(KEY_ERROR to (p.lastError?:"generation_failed")))
+   p.state="ERROR";p.progress=0;p.lastError=t.message?:t.javaClass.simpleName;store.save(p);Result.success(workDataOf(KEY_RESULT_STATE to "ERROR",KEY_ERROR to (p.lastError?:"generation_failed")))
  }
  }
  private fun buildAnalysisReport(audio:Long,timestamps:Int,panels:Int,timelineEnd:Long,delta:Long,corrections:List<String>):String{

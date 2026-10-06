@@ -2,6 +2,8 @@ package com.futurethinking.aivideodirector.data
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.util.AtomicFile
+import java.io.FileOutputStream
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -15,7 +17,36 @@ class ProjectStore(private val context: Context) {
         return runCatching{val a=JSONArray(indexFile.readText());buildList{for(i in 0 until a.length())add(fromJson(a.getJSONObject(i)))}.sortedByDescending{it.updatedAt}}.getOrDefault(emptyList())
     }
     @Synchronized fun create(title:String="Untitled Project"):Project=Project(UUID.randomUUID().toString(),title.ifBlank{"Untitled Project"}).also{File(rootDir,it.id+"/assets").mkdirs();save(it)}
-    @Synchronized fun save(p:Project){p.updatedAt=System.currentTimeMillis();val cur=list().filterNot{it.id==p.id}.toMutableList();cur.add(p);val a=JSONArray();cur.forEach{a.put(toJson(it))};indexFile.writeText(a.toString())}
+    fun save(p:Project){
+  synchronized(ProjectStore::class.java){
+    p.updatedAt=System.currentTimeMillis()
+    val cur=readIndex().filterNot{it.id==p.id}.toMutableList()
+    cur.add(p)
+    val a=JSONArray()
+    cur.forEach{a.put(toJson(it))}
+    writeIndexAtomically(a.toString())
+  }
+}
+private fun readIndex():List<Project>{
+  if(!indexFile.exists()) return emptyList()
+  return runCatching{
+    val a=JSONArray(indexFile.readText())
+    buildList{for(i in 0 until a.length())add(fromJson(a.getJSONObject(i)))}
+  }.getOrDefault(emptyList())
+}
+private fun writeIndexAtomically(text:String){
+  val atomic=AtomicFile(indexFile)
+  var stream:FileOutputStream?=null
+  try{
+    stream=atomic.startWrite()
+    stream.write(text.toByteArray(Charsets.UTF_8))
+    stream.flush()
+    atomic.finishWrite(stream)
+  }catch(t:Throwable){
+    atomic.failWrite(stream)
+    throw t
+  }
+}
     fun projectDir(p:Project)=File(rootDir,p.id).apply{mkdirs()}
     fun assetDir(p:Project)=File(projectDir(p),"assets").apply{mkdirs()}
     fun outputDir(p:Project):File{val b=context.getExternalFilesDir(null)?:context.filesDir;return File(b,"ai-video-exports/"+p.id).apply{mkdirs()}}

@@ -56,7 +56,7 @@ fun EditorApp(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(if (screen == "projects") "AI Universal Auto Editor Pro" else if (screen == "merge") "Merge Videos" else current?.title ?: "Project") },
+                    title = { Text(if (screen == "projects") "Editor and Merger" else if (screen == "merge") "Merge Videos" else current?.title ?: "Project") },
                     navigationIcon = {
                         if (screen != "projects") {
                             IconButton(onClick = { screen = "projects" }) { Icon(Icons.Default.ArrowBack, null) }

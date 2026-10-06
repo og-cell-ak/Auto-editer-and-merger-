@@ -5,7 +5,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="AI Auto Video Editor"
+        android:label="Editor and Merger"
         android:supportsRtl="true"
         android:theme="@style/Theme.AIVideoDirector"
         android:usesCleartextTraffic="false"

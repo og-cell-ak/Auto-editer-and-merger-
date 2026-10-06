@@ -20,7 +20,7 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
    val items=paths.map{EditedMediaItem.Builder(MediaItem.fromUri(android.net.Uri.fromFile(File(it)))).build()}
    stage(12,"Merging selected videos");awaitExport(items,temp){n->stage(12+(n*86/100),"Merging videos")}
    require(temp.exists()&&temp.length()>8192){"merge_output_invalid"};if(out.exists())out.delete();require(temp.renameTo(out)){"merge_finalize_failed"};p.outputPath=out.absolutePath;p.progress=100;p.state="READY";store.save(p);stage(100,"Merge ready");Result.success()
-  }catch(t:Throwable){p.state="ERROR";p.progress=0;p.lastError=t.message?:t.javaClass.simpleName;store.save(p);Result.failure(workDataOf(KEY_ERROR to (p.lastError?:"merge_failed")))}
+  }catch(t:Throwable){p.state="ERROR";p.progress=0;p.lastError=t.message?:t.javaClass.simpleName;store.save(p);Result.success(workDataOf(KEY_RESULT_STATE to "ERROR",KEY_ERROR to (p.lastError?:"merge_failed")))}
  }
  private suspend fun awaitExport(items:List<EditedMediaItem>,file:File,onProgress:(Int)->Unit)=suspendCancellableCoroutine<Unit>{c->
   val handler=Handler(Looper.getMainLooper());handler.post{val holder=ProgressHolder();var tr:Transformer?=null;var done=false

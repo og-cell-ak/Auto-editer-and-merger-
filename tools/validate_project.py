@@ -71,5 +71,13 @@ assert "pageIndex in 0 until renderer.pageCount" in extractor
 assert "setImageDurationMs" in renderer
 assert "setDurationUs" in renderer
 assert "createBlack" in renderer
+assert "atomicfile" in store
+assert "synchronized(projectstore::class.java)" in store
+assert "editor-and-merger-media-queue" in vm
+assert "append_or_replace" in vm
+assert "queue_version" in vm
+assert "key_result_state" in worker
+assert 'key_result_state to "error"' in worker
+assert 'android:label="editor and merger"' in (root / "app/src/main/AndroidManifest.xml").read_text().lower()
 
 print("VALIDATION_OK")
