@@ -79,8 +79,8 @@ assert 'android:label="editor and merger"' in manifest
 
 # Merge stability: use Media3 Transformer only. No raw MediaMuxer shortcut.
 # The rendering app must not contain an active merger UI or merger worker.
-assert "mergewoker" not in all_source.lower()
-assert "mergewoker" not in main
+assert "mergeworker" not in all_source.lower()
+assert "mergeworker" not in main
 assert "mergevideos" not in main
 assert "importmergevideo" not in vm
 assert "mergeselection" not in vm
