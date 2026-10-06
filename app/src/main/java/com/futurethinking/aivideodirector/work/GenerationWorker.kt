@@ -59,5 +59,5 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
  private fun formatMs(ms:Long):String{val a=kotlin.math.abs(ms);return "%02d:%02d.%03d".format(a/60000,(a/1000)%60,a%1000)}
  private fun formatSigned(ms:Long):String{val sign=if(ms>0)"+" else if(ms<0)"-" else "";return sign+formatMs(ms)}
  private fun foreground(text:String,n:Int):ForegroundInfo{val id="ai_generation";if(Build.VERSION.SDK_INT>=26)applicationContext.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(id,"Video generation",NotificationManager.IMPORTANCE_LOW));val no=NotificationCompat.Builder(applicationContext,id).setContentTitle("AI Universal Auto Editor Pro").setContentText(text).setSmallIcon(android.R.drawable.ic_media_play).setOnlyAlertOnce(true).setOngoing(true).setProgress(100,n.coerceIn(0,100),false).build();return ForegroundInfo(1001,no,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)}
- companion object{const val KEY_PROJECT_ID="project_id";const val KEY_PROGRESS="progress";const val KEY_STAGE="stage";const val KEY_ERROR="error"}
+ companion object{const val KEY_PROJECT_ID="project_id";const val KEY_PROGRESS="progress";const val KEY_STAGE="stage";const val KEY_ERROR="error";const val KEY_RESULT_STATE="result_state"}
 }
