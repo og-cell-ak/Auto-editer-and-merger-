@@ -22,7 +22,7 @@ jobs:
         run: for i in 1 2 3 4 5; do echo "SOURCE VALIDATION PASS $i"; python3 tools/validate_project.py; done
       - name: Create CI signing key
         run: |
-          keytool -genkeypair -v -keystore app/ci-release.p12 -storetype PKCS12 -alias editor-and-merger -keyalg RSA -keysize 2048 -validity 10000 -storepass changeit -keypass changeit -dname "CN=Editor and Merger, OU=Mobile, O=Personal, L=India, ST=Haryana, C=IN"
+          keytool -genkeypair -v -keystore app/ci-release.p12 -storetype PKCS12 -alias ai-universal-auto-editor-pro -keyalg RSA -keysize 2048 -validity 10000 -storepass changeit -keypass changeit -dname "CN=Editor and Merger, OU=Mobile, O=Personal, L=India, ST=Haryana, C=IN"
       - name: Build signed release APK
         run: |
           gradle --no-daemon --stacktrace test assembleRelease             -PreleaseKeystore=app/ci-release.p12             -PreleaseStorePassword=changeit             -PreleaseKeyAlias=ai-universal-auto-editor-pro             -PreleaseKeyPassword=changeit
