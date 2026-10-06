@@ -96,7 +96,7 @@ class MainViewModel(app:Application):AndroidViewModel(app){
   val p=_current.value?:return
   viewModelScope.launch(Dispatchers.IO){
    runCatching{store.importUri(p,uri,"source")}
-    .onSuccess{p.pdfPath=it;p.outputPath=null;p.state="DRAFT";p.progress=0;p.progressStage="";p.analysisReport=null;store.save(p);refresh()}
+    .onSuccess{p.pdfPath=it;p.visualPaths.clear();p.pdfPageCount=0;p.scenePlanJson=null;p.outputPath=null;p.state="DRAFT";p.progress=0;p.progressStage="";p.analysisReport=null;store.save(p);refresh()}
     .onFailure{_error.value=it.message}
   }
  }
