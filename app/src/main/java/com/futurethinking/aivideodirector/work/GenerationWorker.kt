@@ -64,10 +64,18 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
    stage(10,"Extracting yellow-line panels")
    val dir=File(store.assetDir(p),"pdf-visuals")
    dir.deleteRecursively()
+   var lastExtractionPersistAt=0L
+   var lastExtractionPersistProgress=-1
    val ex=PdfVisualExtractor(applicationContext).extract(p.pdfPath!!,dir){a,b->
     if(!isStopped){
-     p.progress=a;p.progressStage=b;p.state="ANALYZING";store.save(p)
+     val now=System.currentTimeMillis()
+     p.progress=a;p.progressStage=b;p.state="ANALYZING"
      setProgressAsync(workDataOf(KEY_PROGRESS to a,KEY_STAGE to b))
+     if(a>=55 || a-lastExtractionPersistProgress>=2 || now-lastExtractionPersistAt>=1000L){
+      lastExtractionPersistAt=now
+      lastExtractionPersistProgress=a
+      store.save(p)
+     }
     }
    }
    require(ex.visualPaths.isNotEmpty()){"pdf_extraction_failed"}
@@ -135,7 +143,7 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
    val transientFailure=t is java.io.IOException ||
      t is androidx.media3.transformer.ExportException ||
      t is IllegalStateException
-   if(transientFailure&&runAttemptCount<2){
+   if(transientFailure&&runAttemptCount<3){
     p.state="QUEUED";p.progress=1;p.progressStage="Retrying after temporary renderer issue"
     p.lastError="Temporary renderer/codec issue. WorkManager will retry automatically."
     store.save(p)
