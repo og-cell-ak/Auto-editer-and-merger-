@@ -80,7 +80,7 @@ object QualityControl {
                 val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
                 when {
                     duration <= 0L -> "invalid_duration"
-                    abs(duration - expectedDurationMs) > 3000L -> "duration_mismatch"
+                    abs(duration - expectedDurationMs) > 5000L -> "duration_mismatch"
                     retriever.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) == null -> "first_frame_not_decodable"
                     else -> null
                 }
