@@ -105,7 +105,7 @@ class ProjectStore(private val context: Context) {
         putOpt("outputPath",p.outputPath);put("state",p.state);putOpt("lastError",p.lastError)
         putOpt("scenePlanJson",p.scenePlanJson);put("progress",p.progress);put("isMerged",p.isMerged)
         putOpt("mergeItemsJson",p.mergeItemsJson);putOpt("analysisReport",p.analysisReport)
-        put("progressStage",p.progressStage)
+        put("progressStage",p.progressStage);put("queueRank",p.queueRank)
         put("prefs",JSONObject().apply{
             put("aspectRatio",p.preferences.aspectRatio.name);put("fps",p.preferences.fps);put("exportFormat",p.preferences.exportFormat)
         })
@@ -127,7 +127,7 @@ class ProjectStore(private val context: Context) {
             j.optLong("durationMs"),j.optString("outputPath").ifBlank{null},j.optString("state","DRAFT"),
             j.optString("lastError").ifBlank{null},j.optString("scenePlanJson").ifBlank{null},j.optInt("progress"),
             j.optBoolean("isMerged"),j.optString("mergeItemsJson").ifBlank{null},
-            j.optString("analysisReport").ifBlank{null},j.optString("progressStage","")
+            j.optString("analysisReport").ifBlank{null},j.optString("progressStage",""),j.optLong("queueRank",j.optLong("createdAt",System.currentTimeMillis()))
         )
     }
 }
