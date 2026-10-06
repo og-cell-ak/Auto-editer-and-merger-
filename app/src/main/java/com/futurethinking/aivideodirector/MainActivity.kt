@@ -177,25 +177,34 @@ fun MergeScreen(
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Add videos in exact merge order.", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(10.dp))
+        if (selected.isNotEmpty()) {
+            Text("Selected order", style = MaterialTheme.typography.titleMedium)
+            LazyColumn(Modifier.heightIn(max = 220.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                itemsIndexed(selected, key = { index, token -> index.toString() + ":" + token }) { index, token ->
+                    val label = if (token.startsWith("video:")) "Imported: " + java.io.File(token.removePrefix("video:")).name else ready.firstOrNull { it.id == token }?.title ?: "Project"
+                    Card(Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("#" + (index + 1), style = MaterialTheme.typography.titleMedium)
+                            Spacer(Modifier.width(10.dp))
+                            Text(label, Modifier.weight(1f))
+                            TextButton(onClick = { vm.removeMergeItem(token) }) { Text("Remove") }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(ready, key = { it.id }) { project ->
                 val position = selected.indexOf(project.id)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Button(
-                        onClick = { vm.addMergeItem(project.id) },
-                        enabled = position < 0,
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Add " + project.title) }
+                    Button(onClick = { vm.addMergeItem(project.id) }, enabled = position < 0, modifier = Modifier.weight(1f)) { Text(if (position >= 0) "Selected" else "Add " + project.title) }
                     if (position >= 0) Text(" #" + (position + 1))
                 }
             }
         }
         OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) { Text("Import video from phone") }
         Text("Selected videos: " + selected.size)
-        Button(
-            onClick = { vm.merge(emptyList()) },
-            enabled = selected.isNotEmpty(),
-            modifier = Modifier.fillMaxWidth()
-        ) { Text("Merge selected videos") }
+        Button(onClick = { vm.merge(emptyList()) }, enabled = selected.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Merge selected videos") }
     }
 }
