@@ -21,7 +21,13 @@ class MergeWorker(appContext:android.content.Context,params:WorkerParameters):Co
   val id=inputData.getString(KEY_PROJECT_ID)?:return Result.failure(workDataOf(KEY_ERROR to "missing_project_id"))
   val store=ProjectStore(applicationContext)
   val p=store.list().firstOrNull{it.id==id}?:return Result.failure(workDataOf(KEY_ERROR to "merge_project_not_found"))
-  if(p.state=="PAUSED"||p.state=="CANCELLED") return Result.success(workDataOf(KEY_SKIPPED to true))
+  // Protect against duplicate queue entries after reconciliation or restart.
+  if(p.state=="READY" && p.outputPath?.let{File(it).exists() && File(it).length()>8192L}==true)
+   return Result.success(workDataOf(KEY_SKIPPED to true))
+  if(p.state=="PAUSED"||p.state=="CANCELLED"||p.state=="ERROR"||p.state=="IMPORT")
+   return Result.success(workDataOf(KEY_SKIPPED to true))
+  if(p.state!="QUEUED"&&p.state!="MERGING")
+   return Result.success(workDataOf(KEY_SKIPPED to true))
   val next=store.list().filter{it.state=="QUEUED"}.minByOrNull{it.queueRank}
   if(next!=null&&next.id!=p.id) return Result.success(workDataOf(KEY_SKIPPED to true))
 
