@@ -19,7 +19,15 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
   val store=ProjectStore(applicationContext)
   val p=store.list().firstOrNull{it.id==id}
    ?:return Result.failure(workDataOf(KEY_ERROR to "project_not_found"))
-  if(p.state=="PAUSED"||p.state=="CANCELLED") return Result.success(workDataOf(KEY_SKIPPED to true))
+  // A queue reconciliation or a fast repeated tap can leave a duplicate
+  // WorkRequest in the unique chain. Never re-render a project that has
+  // already completed, and never start work for a non-pending project.
+  if(p.state=="READY" && p.outputPath?.let{File(it).exists() && File(it).length()>8192L}==true)
+   return Result.success(workDataOf(KEY_SKIPPED to true))
+  if(p.state=="PAUSED"||p.state=="CANCELLED"||p.state=="DRAFT"||p.state=="ERROR")
+   return Result.success(workDataOf(KEY_SKIPPED to true))
+  if(p.state!="QUEUED"&&p.state!="ANALYZING"&&p.state!="RENDERING")
+   return Result.success(workDataOf(KEY_SKIPPED to true))
   val next=store.list().filter{it.state=="QUEUED"}.minByOrNull{it.queueRank}
   if(next!=null&&next.id!=p.id) return Result.success(workDataOf(KEY_SKIPPED to true))
 
