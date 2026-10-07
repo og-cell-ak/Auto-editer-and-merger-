@@ -113,7 +113,7 @@ assert "buildmanhwascroll" in renderer_lower
 assert "specialpanelscrolldetector" in renderer_lower
 assert "containstargettext" in renderer_lower
 assert "manhwa talks 007" in all_source.lower()
-assert "setscale(2.0f, 2.0f)" in renderer
+assert "setscale(2.0f, 2.0f)" in renderer_lower
 assert "verticaltranslation" in renderer_lower
 assert "effects(emptylist(), emptylist())" in renderer_lower
 assert "max_mismatch_ms = 5000l" in planner.lower()
