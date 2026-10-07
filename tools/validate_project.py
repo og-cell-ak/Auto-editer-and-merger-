@@ -15,6 +15,7 @@ required = [
     "app/src/main/java/com/futurethinking/aivideodirector/media/PdfVisualExtractor.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/media/SceneFrameFactory.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/media/VideoRenderer.kt",
+    "app/src/main/java/com/futurethinking/aivideodirector/media/SpecialPanelScrollDetector.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/media/MediaExportGate.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/work/QueueRecoveryReceiver.kt",
     "app/src/main/java/com/futurethinking/aivideodirector/pipeline/AudioDurationReader.kt",
@@ -107,11 +108,16 @@ assert "video renderer" in (root / "app/src/main/res/values/strings.xml").read_t
 assert "mincoverage = 0.55f" in extractor.lower()
 assert "r >= 170" in extractor.lower() and "g >= 125" in extractor.lower() and "b <= 155" in extractor.lower()
 assert "scaledsize(page.width, page.height, 1920)" in extractor.lower()
-assert "val scale = 1.018f + (0.010f * eased)" in renderer
-assert "val travel = 0.006f" in renderer
-assert "left_to_right" in renderer_lower and "right_to_left" in renderer_lower
-assert "top_to_bottom" in renderer_lower and "bottom_to_top" in renderer_lower
+assert "buildsubtlepan" not in renderer_lower
+assert "buildmanhwascroll" in renderer_lower
+assert "specialpanelscrolldetector" in renderer_lower
+assert "containstargettext" in renderer_lower
+assert "manhwa talks 007" in all_source.lower()
+assert "setscale(2.0f, 2.0f)" in renderer
+assert "verticaltranslation" in renderer_lower
+assert "effects(emptylist(), emptylist())" in renderer_lower
 assert "max_mismatch_ms = 5000l" in planner.lower()
+assert "timestamps must be strictly increasing" in (java_root / "com/futurethinking/aivideodirector/pipeline/TimestampScriptParser.kt").read_text().lower()
 
 assert "queuerank" in store
 assert "rendernow" in vm and "moveup" in vm and "movedown" in vm
