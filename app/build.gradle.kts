@@ -79,6 +79,7 @@ dependencies {
     implementation("androidx.media3:media3-effect:1.11.1")
     implementation("androidx.media3:media3-common:1.11.1")
     implementation("androidx.media3:media3-ui:1.11.1")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
 
     testImplementation("junit:junit:4.13.2")
 }
