@@ -52,6 +52,8 @@ class VideoRenderer(private val context: Context) {
         val temp = File(outputFile.parentFile, "." + outputFile.nameWithoutExtension + ".rendering.mp4")
         if (temp.exists()) temp.delete()
 
+        val specialPanelScrollDetector = SpecialPanelScrollDetector(context)
+
         try {
             val frameItems = scenes.mapIndexed { index, scene ->
                 val frame = File(frameDir, "scene-" + index.toString().padStart(4, '0') + ".jpg")
@@ -78,13 +80,23 @@ class VideoRenderer(private val context: Context) {
                     .setImageDurationMs(durationMs)
                     .build()
 
-                val effects = if (scene.isBlackFrame || scene.motionDirection == null) {
-                    Effects(emptyList(), emptyList())
+                val specialScroll = if (scene.isBlackFrame) {
+                    false
                 } else {
+                    val source = requireNotNull(scene.visualPath).let(::File)
+                    specialPanelScrollDetector.containsTargetText(source)
+                }
+
+                // Normal panels receive no motion effect at all. Only a panel
+                // containing the exact upper-left marker gets the long-panel
+                // top-to-bottom keyframed scroll.
+                val effects = if (specialScroll) {
                     Effects(
                         emptyList(),
-                        listOf(buildSubtlePan(scene.motionDirection, durationMs))
+                        listOf(buildManhwaScroll(durationMs))
                     )
+                } else {
+                    Effects(emptyList(), emptyList())
                 }
 
                 EditedMediaItem.Builder(item)
@@ -118,6 +130,7 @@ class VideoRenderer(private val context: Context) {
             }
             onProgress(98)
         } finally {
+            specialPanelScrollDetector.close()
             frameDir.deleteRecursively()
             if (temp.exists()) temp.delete()
         }
@@ -125,39 +138,27 @@ class VideoRenderer(private val context: Context) {
     }
 
     /**
-     * Applies a very small, bounded Ken-Burns-style translation.
-     *
-     * The image is always scaled above 1.0 before translation. This is the
-     * critical guard against exposing the transformed frame's transparent/
-     * empty area. Translation stays far inside the available crop margin.
+     * Smoothly scrolls a special long panel from its upper half to its lower
+     * half. The 2x scale makes roughly 50% of the source frame visible at a
+     * time. The motion occupies the entire scene duration, so a five-second
+     * scene scrolls over five seconds and a ten-second scene scrolls over ten.
      */
-    private fun buildSubtlePan(
-        direction: Enums.MotionDirection,
-        durationMs: Long
-    ): MatrixTransformation = MatrixTransformation { presentationTimeUs ->
-        val durationUs = (durationMs * 1000L).coerceAtLeast(1L)
-        val progress = (presentationTimeUs.toDouble() / durationUs.toDouble())
-            .coerceIn(0.0, 1.0)
-        val eased = (0.5 - 0.5 * kotlin.math.cos(progress * Math.PI)).toFloat()
+    private fun buildManhwaScroll(durationMs: Long): MatrixTransformation =
+        MatrixTransformation { presentationTimeUs ->
+            val durationUs = (durationMs * 1000L).coerceAtLeast(1L)
+            val progress = (presentationTimeUs.toDouble() / durationUs.toDouble())
+                .coerceIn(0.0, 1.0)
 
-        val scale = 1.018f + (0.010f * eased)
-        val travel = 0.006f
-        val tx = when (direction) {
-            Enums.MotionDirection.LEFT_TO_RIGHT -> -travel + (2f * travel * eased)
-            Enums.MotionDirection.RIGHT_TO_LEFT -> travel - (2f * travel * eased)
-            else -> 0f
-        }
-        val ty = when (direction) {
-            Enums.MotionDirection.TOP_TO_BOTTOM -> -travel + (2f * travel * eased)
-            Enums.MotionDirection.BOTTOM_TO_TOP -> travel - (2f * travel * eased)
-            else -> 0f
-        }
+            // Smoothstep gives a continuous, gentle start and finish with no
+            // sudden jump between the upper and lower halves.
+            val eased = (progress * progress * (3.0 - 2.0 * progress)).toFloat()
+            val verticalTranslation = -1.0f + (2.0f * eased)
 
-        Matrix().apply {
-            setScale(scale, scale)
-            postTranslate(tx, ty)
+            Matrix().apply {
+                setScale(2.0f, 2.0f)
+                postTranslate(0f, verticalTranslation)
+            }
         }
-    }
 
     private suspend fun awaitExport(
         composition: Composition,
