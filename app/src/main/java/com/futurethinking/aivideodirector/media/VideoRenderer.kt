@@ -20,6 +20,7 @@ import com.futurethinking.aivideodirector.data.Enums
 import com.futurethinking.aivideodirector.data.ScenePlan
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -84,7 +85,8 @@ class VideoRenderer(private val context: Context) {
                     false
                 } else {
                     val source = requireNotNull(scene.visualPath).let(::File)
-                    specialPanelScrollDetector.containsTargetText(source)
+                    specialPanelScrollDetector.containsTargetText(source) ||
+                        specialPanelScrollDetector.containsTargetText(frame)
                 }
 
                 // Normal panels receive no motion effect at all. Only a panel
@@ -143,11 +145,18 @@ class VideoRenderer(private val context: Context) {
      * time. The motion occupies the entire scene duration, so a five-second
      * scene scrolls over five seconds and a ten-second scene scrolls over ten.
      */
-    private fun buildManhwaScroll(durationMs: Long): MatrixTransformation =
-        MatrixTransformation { presentationTimeUs ->
-            val durationUs = (durationMs * 1000L).coerceAtLeast(1L)
-            val progress = (presentationTimeUs.toDouble() / durationUs.toDouble())
-                .coerceIn(0.0, 1.0)
+    private fun buildManhwaScroll(durationMs: Long): MatrixTransformation {
+        val durationUs = (durationMs * 1000L).coerceAtLeast(1L)
+        val firstPresentationTimeUs = AtomicLong(Long.MIN_VALUE)
+
+        return MatrixTransformation { presentationTimeUs ->
+            // Give every special panel its own time origin. This prevents a
+            // later special panel from inheriting an already-completed scroll.
+            val first = firstPresentationTimeUs.updateAndGet { current ->
+                if (current == Long.MIN_VALUE) presentationTimeUs else current
+            }
+            val localTimeUs = (presentationTimeUs - first).coerceIn(0L, durationUs)
+            val progress = localTimeUs.toDouble() / durationUs.toDouble()
 
             // Smoothstep gives a continuous, gentle start and finish with no
             // sudden jump between the upper and lower halves.
@@ -159,6 +168,7 @@ class VideoRenderer(private val context: Context) {
                 postTranslate(0f, verticalTranslation)
             }
         }
+    }
 
     private suspend fun awaitExport(
         composition: Composition,
