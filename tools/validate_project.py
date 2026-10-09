@@ -126,7 +126,7 @@ assert "android.net.uri.fromfile(inputimage)" in renderer_lower
 assert "specialpanelscrolldetector" in renderer_lower
 assert "containstargettext" in renderer_lower
 assert "manhwa talks 007" in all_source.lower()
-assert "verticaltranslation" in renderer_lower
+assert "translationy" in renderer_lower
 assert "max_mismatch_ms = 5000l" in planner.lower()
 assert "timestamps must be strictly increasing" in (java_root / "com/futurethinking/aivideodirector/pipeline/TimestampScriptParser.kt").read_text().lower()
 
