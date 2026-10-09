@@ -94,19 +94,19 @@ class VideoRenderer(private val context: Context) {
                     specialPanelScrollDetector.containsAnyText(frame)
                 }
 
-                // Preserve the existing Manhwa Talks 007 motion. Otherwise,
-                // all panels scroll downward at a fixed zoom selected by OCR:
-                // textless = 1.2x (20%); text present = 1.5x (50%).
-                val effects = when {
-                    hasMarker -> Effects(
-                        emptyList(),
-                        listOf(buildManhwaScroll(durationMs))
-                    )
-                    else -> Effects(
-                        emptyList(),
-                        listOf(buildFixedZoomScroll(durationMs, preferences.aspectRatio.height, if (hasText) 1.5f else 1.2f))
-                    )
-                }
+                // No special animation for the marker. If "Manhwa Talks 007"
+                // is detected in the panel's upper-left area, treat it like any
+                // other text panel: fixed 50% zoom with the same downward scroll.
+                // Other text panels use 50%; textless panels use 20%.
+                val zoom = if (hasText || hasMarker) 1.5f else 1.2f
+                val effects = Effects(
+                    emptyList(),
+                    listOf(buildFixedZoomScroll(
+                        durationMs,
+                        preferences.aspectRatio.height,
+                        zoom
+                    ))
+                )
 
                 EditedMediaItem.Builder(item)
                     .setEffects(effects)
@@ -143,37 +143,6 @@ class VideoRenderer(private val context: Context) {
             frameDir.deleteRecursively()
             if (temp.exists()) temp.delete()
         }
-        }
-    }
-
-    /**
-     * Smoothly scrolls a special long panel from its upper half to its lower
-     * half. The 2x scale makes roughly 50% of the source frame visible at a
-     * time. The motion occupies the entire scene duration, so a five-second
-     * scene scrolls over five seconds and a ten-second scene scrolls over ten.
-     */
-    private fun buildManhwaScroll(durationMs: Long): MatrixTransformation {
-        val durationUs = (durationMs * 1000L).coerceAtLeast(1L)
-        val firstPresentationTimeUs = AtomicLong(Long.MIN_VALUE)
-
-        return MatrixTransformation { presentationTimeUs ->
-            // Give every special panel its own time origin. This prevents a
-            // later special panel from inheriting an already-completed scroll.
-            val first = firstPresentationTimeUs.updateAndGet { current ->
-                if (current == Long.MIN_VALUE) presentationTimeUs else current
-            }
-            val localTimeUs = (presentationTimeUs - first).coerceIn(0L, durationUs)
-            val progress = localTimeUs.toDouble() / durationUs.toDouble()
-
-            // Smoothstep gives a continuous, gentle start and finish with no
-            // sudden jump between the upper and lower halves.
-            val eased = (progress * progress * (3.0 - 2.0 * progress)).toFloat()
-            val verticalTranslation = -1.0f + (2.0f * eased)
-
-            Matrix().apply {
-                setScale(2.0f, 2.0f)
-                postTranslate(0f, verticalTranslation)
-            }
         }
     }
 
