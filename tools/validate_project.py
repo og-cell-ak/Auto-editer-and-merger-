@@ -113,7 +113,7 @@ assert "r >= 170" in extractor.lower() and "g >= 125" in extractor.lower() and "
 assert "scaledsize(page.width, page.height, 1920)" in extractor.lower()
 assert "buildsubtlepan" not in renderer_lower
 assert "buildfixedzoomscroll" in renderer_lower
-assert "val zoom = if (hasmarker) 1.5f else 1.2f" in renderer_lower
+assert "val zoom = if (hasmarker) 1.7f else 1.2f" in renderer_lower
 assert "containsanytext(frame)" not in renderer_lower
 assert "override fun configure(inputwidth: int, inputheight: int): size" in renderer_lower
 assert "return size(outputwidth, outputheight)" in renderer_lower
