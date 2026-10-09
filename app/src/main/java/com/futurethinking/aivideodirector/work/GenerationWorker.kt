@@ -187,8 +187,9 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
     MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values
    ) ?: error("Could not create Movies/EDITOR media entry")
    try {
-    applicationContext.contentResolver.openOutputStream(uri, "w").use { output ->
-     requireNotNull(output) { "Could not open Movies/EDITOR output stream" }
+    val stream = applicationContext.contentResolver.openOutputStream(uri, "w")
+     ?: error("Could not open Movies/EDITOR output stream")
+    stream.use { output ->
      source.inputStream().use { input -> input.copyTo(output, 1024 * 1024) }
     }
     require(applicationContext.contentResolver.update(
