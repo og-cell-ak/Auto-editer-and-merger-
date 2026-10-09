@@ -81,6 +81,9 @@ class VideoRenderer(private val context: Context) {
                     .setImageDurationMs(durationMs)
                     .build()
 
+                // Only the exact "Manhwa Talks 007" marker in the panel's
+                // upper-left area selects 50% zoom. Ordinary text elsewhere
+                // must not trigger it; every other panel uses 20% zoom.
                 val hasMarker = if (scene.isBlackFrame) {
                     false
                 } else {
@@ -88,17 +91,7 @@ class VideoRenderer(private val context: Context) {
                     specialPanelScrollDetector.containsTargetText(source) ||
                         specialPanelScrollDetector.containsTargetText(frame)
                 }
-                val hasText = if (scene.isBlackFrame) {
-                    false
-                } else {
-                    specialPanelScrollDetector.containsAnyText(frame)
-                }
-
-                // No special animation for the marker. If "Manhwa Talks 007"
-                // is detected in the panel's upper-left area, treat it like any
-                // other text panel: fixed 50% zoom with the same downward scroll.
-                // Other text panels use 50%; textless panels use 20%.
-                val zoom = if (hasText || hasMarker) 1.5f else 1.2f
+                val zoom = if (hasMarker) 1.5f else 1.2f
                 val effects = Effects(
                     emptyList(),
                     listOf(buildFixedZoomScroll(
@@ -147,9 +140,10 @@ class VideoRenderer(private val context: Context) {
     }
 
     /**
-     * Keeps a constant zoom for this panel while smoothly moving the image
-     * upward in frame coordinates, making the visible viewport scroll down.
-     * Textless panels use 1.2x (20%); panels with text use 1.5x (50%).
+     * Start at the selected zoom immediately, aligned to the top of the
+     * panel, then smoothly scroll through the panel over its full timestamp
+     * duration. Travel exactly the available overflow so no black edge is
+     * exposed. The image moves upward as the viewer reads downward.
      */
     private fun buildFixedZoomScroll(
         durationMs: Long,
@@ -166,7 +160,11 @@ class VideoRenderer(private val context: Context) {
             val localTimeUs = (presentationTimeUs - first).coerceIn(0L, durationUs)
             val progress = localTimeUs.toDouble() / durationUs.toDouble()
             val eased = (progress * progress * (3.0 - 2.0 * progress)).toFloat()
-            val verticalTranslation = -frameHeight * 0.12f * eased
+            // The scaled image starts aligned to the top (translation 0).
+            // Move it up by only the extra scaled height, spread over the whole
+            // timestamp duration. This prevents blank/black edges and avoids
+            // the old fixed 12%-of-frame travel that barely covered the panel.
+            val verticalTranslation = -frameHeight * (scale - 1f).coerceAtLeast(0f) * eased
 
             Matrix().apply {
                 setScale(scale, scale)
