@@ -65,7 +65,11 @@ class TimestampScenePlanner {
                 }
             }
 
-            val start = snapToFrame(marker.startMs, fps).coerceIn(0L, audioDurationMs)
+            // A timestamp at the start of the script describes the first visual,
+            // not an instruction to render a black lead-in. Start the first panel
+            // at video time zero while preserving all later timestamp boundaries.
+            val start = if (index == 0) 0L
+                else snapToFrame(marker.startMs, fps).coerceIn(0L, audioDurationMs)
             require(abs(start - marker.startMs) <= frameTolerance + 1L) {
                 "Timestamp quantization exceeded frame tolerance at " + formatMs(marker.startMs) + "."
             }
