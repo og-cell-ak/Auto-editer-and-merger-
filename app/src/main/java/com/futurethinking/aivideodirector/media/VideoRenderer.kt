@@ -89,24 +89,23 @@ class VideoRenderer(private val context: Context) {
                         specialPanelScrollDetector.containsTargetText(frame)
                 }
                 val hasText = if (scene.isBlackFrame) {
-                    true
+                    false
                 } else {
                     specialPanelScrollDetector.containsAnyText(frame)
                 }
 
-                // Keep the existing Manhwa Talks 007 behavior unchanged.
-                // Only otherwise-static panels with no readable text get the
-                // requested gentle zoom from 20% to 50%, over their timestamp duration.
+                // Preserve the existing Manhwa Talks 007 motion. Otherwise,
+                // all panels scroll downward at a fixed zoom selected by OCR:
+                // textless = 1.2x (20%); text present = 1.5x (50%).
                 val effects = when {
                     hasMarker -> Effects(
                         emptyList(),
                         listOf(buildManhwaScroll(durationMs))
                     )
-                    !hasText -> Effects(
+                    else -> Effects(
                         emptyList(),
-                        listOf(buildTextlessPanelZoomScroll(durationMs, preferences.aspectRatio.height))
+                        listOf(buildFixedZoomScroll(durationMs, preferences.aspectRatio.height, if (hasText) 1.5f else 1.2f))
                     )
-                    else -> Effects(emptyList(), emptyList())
                 }
 
                 EditedMediaItem.Builder(item)
@@ -179,13 +178,14 @@ class VideoRenderer(private val context: Context) {
     }
 
     /**
-     * Textless panels begin at 1.2x (20% zoom) and smoothly reach 1.5x
-     * (50% zoom). The image shifts upward gently so the visible view travels
-     * downward. The full movement follows the scene's timestamp duration.
+     * Keeps a constant zoom for this panel while smoothly moving the image
+     * upward in frame coordinates, making the visible viewport scroll down.
+     * Textless panels use 1.2x (20%); panels with text use 1.5x (50%).
      */
-    private fun buildTextlessPanelZoomScroll(
+    private fun buildFixedZoomScroll(
         durationMs: Long,
-        frameHeight: Int
+        frameHeight: Int,
+        scale: Float
     ): MatrixTransformation {
         val durationUs = (durationMs * 1000L).coerceAtLeast(1L)
         val firstPresentationTimeUs = AtomicLong(Long.MIN_VALUE)
@@ -197,7 +197,6 @@ class VideoRenderer(private val context: Context) {
             val localTimeUs = (presentationTimeUs - first).coerceIn(0L, durationUs)
             val progress = localTimeUs.toDouble() / durationUs.toDouble()
             val eased = (progress * progress * (3.0 - 2.0 * progress)).toFloat()
-            val scale = 1.2f + (0.3f * eased)
             val verticalTranslation = -frameHeight * 0.12f * eased
 
             Matrix().apply {
