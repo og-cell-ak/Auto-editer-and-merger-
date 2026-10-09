@@ -18,9 +18,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "9.3.1"
-      - name: Five-pass code verification
+      - name: Ten-pass code verification
         run: |
-          for i in 1 2 3 4 5 6; do
+          for i in 1 2 3 4 5 6 7 8 9 10; do
             echo "CODE VERIFICATION PASS $i"
             python3 -m py_compile tools/validate_project.py
             python3 tools/validate_project.py
