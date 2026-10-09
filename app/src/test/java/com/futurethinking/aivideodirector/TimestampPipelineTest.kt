@@ -89,19 +89,19 @@ class TimestampPipelineTest {
             AppPreferences()
         ).scenes
 
-        assertEquals(5, scenes.size)
-        assertTrue(scenes[0].isBlackFrame)
-        assertTrue(!scenes[1].isBlackFrame)
-        assertTrue(scenes[2].isBlackFrame)
-        assertTrue(!scenes[3].isBlackFrame)
-        assertTrue(scenes[4].isBlackFrame)
+        assertEquals(4, scenes.size)
+        assertTrue(!scenes[0].isBlackFrame)
+        assertTrue(scenes[1].isBlackFrame)
+        assertTrue(!scenes[2].isBlackFrame)
+        assertTrue(scenes[3].isBlackFrame)
 
+        // The first visual starts at video time zero instead of a black lead-in.
         assertEquals(0L, scenes[0].startMs)
-        assertEquals(1000L, scenes[0].endMs)
-        assertEquals(1000L, scenes[1].startMs)
-        assertEquals(2000L, scenes[1].endMs)
-        assertEquals(3000L, scenes[3].startMs)
-        assertEquals(4000L, scenes[3].endMs)
-        assertEquals(5000L, scenes[4].endMs)
+        assertEquals(2000L, scenes[0].endMs)
+        assertEquals(2000L, scenes[1].startMs)
+        assertEquals(3000L, scenes[1].endMs)
+        assertEquals(3000L, scenes[2].startMs)
+        assertEquals(4000L, scenes[2].endMs)
+        assertEquals(5000L, scenes[3].endMs)
     }
 }
