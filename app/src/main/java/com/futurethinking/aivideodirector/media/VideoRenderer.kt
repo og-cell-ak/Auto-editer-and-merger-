@@ -91,12 +91,12 @@ class VideoRenderer(private val context: Context) {
                     .build()
 
                 // Only the exact "Manhwa Talks 007" marker in the panel's
-                // upper-left area selects 50% extra zoom. Ordinary text elsewhere
+                // upper-left area selects 70% zoom. Ordinary text elsewhere
                 // must not trigger it; every other panel uses 20% extra zoom.
                 val hasMarker = visualSource?.let {
                     specialPanelScrollDetector.containsTargetText(it)
                 } ?: false
-                val zoom = if (hasMarker) 1.5f else 1.2f
+                val zoom = if (hasMarker) 1.7f else 1.2f
                 val effects = Effects(
                     emptyList(),
                     listOf(buildFixedZoomScroll(
