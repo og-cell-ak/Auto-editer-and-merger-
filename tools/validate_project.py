@@ -107,20 +107,20 @@ assert "mediaexportgate.withlock" in renderer.lower()
 assert "inspectrenderedfile" in worker
 assert "queuerecoveryreceiver" in manifest
 assert "receive_boot_completed" in manifest
-assert "video renderer" in (root / "app/src/main/res/values/strings.xml").read_text().lower()
+assert '<string name="app_name">EDITOR</string>' in (root / "app/src/main/res/values/strings.xml").read_text()
 assert "mincoverage = 0.55f" in extractor.lower()
 assert "r >= 170" in extractor.lower() and "g >= 125" in extractor.lower() and "b <= 155" in extractor.lower()
 assert "scaledsize(page.width, page.height, 1920)" in extractor.lower()
 assert "buildsubtlepan" not in renderer_lower
-assert "buildmanhwascroll" in renderer_lower
-assert "buildtextlesspanelzoomscroll" in renderer_lower
+assert "buildfixedzoomscroll" in renderer_lower
+assert "if (hastext || hasmarker) 1.5f else 1.2f" in renderer_lower
 assert "setscale(scale, scale)" in renderer_lower
-assert "1.2f + (0.3f * eased)" in renderer_lower
+assert "if (hastext || hasmarker) 1.5f else 1.2f" in renderer_lower
 assert "containsanytext" in renderer_lower
 assert "specialpanelscrolldetector" in renderer_lower
 assert "containstargettext" in renderer_lower
 assert "manhwa talks 007" in all_source.lower()
-assert "setscale(2.0f, 2.0f)" in renderer_lower
+assert "setscale(scale, scale)" in renderer_lower
 assert "verticaltranslation" in renderer_lower
 assert "effects(emptylist(), emptylist())" in renderer_lower
 assert "max_mismatch_ms = 5000l" in planner.lower()
