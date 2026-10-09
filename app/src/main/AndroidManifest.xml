@@ -7,7 +7,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="Editor and Merger"
+        android:label="EDITOR"
         android:supportsRtl="true"
         android:theme="@style/Theme.AIVideoDirector"
         android:usesCleartextTraffic="false"
