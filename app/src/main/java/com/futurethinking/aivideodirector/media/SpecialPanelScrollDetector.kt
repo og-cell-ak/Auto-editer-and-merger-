@@ -52,6 +52,30 @@ class SpecialPanelScrollDetector(context: Context) : AutoCloseable {
             }
         }
 
+    /** Returns true when OCR finds any visible text in the supplied panel image. */
+    suspend fun containsAnyText(source: File): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            try {
+                val image = InputImage.fromFilePath(appContext, Uri.fromFile(source))
+                recognizer.process(image)
+                    .addOnSuccessListener { result ->
+                        if (continuation.isActive) {
+                            continuation.resume(
+                                result.textBlocks.any { block ->
+                                    block.lines.any { line -> line.text.isNotBlank() }
+                                }
+                            )
+                        }
+                    }
+                    .addOnFailureListener {
+                        if (continuation.isActive) continuation.resume(true)
+                    }
+            } catch (_: Throwable) {
+                // If OCR cannot read the image, do not misclassify it as textless.
+                if (continuation.isActive) continuation.resume(true)
+            }
+        }
+
     override fun close() {
         recognizer.close()
     }
