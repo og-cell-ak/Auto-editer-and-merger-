@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.Size
 import androidx.media3.effect.MatrixTransformation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
@@ -26,6 +27,7 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.withLock
 import kotlin.math.abs
+import kotlin.math.max
 
 class VideoRenderer(private val context: Context) {
     suspend fun render(
@@ -57,9 +59,13 @@ class VideoRenderer(private val context: Context) {
 
         try {
             val frameItems = scenes.mapIndexed { index, scene ->
-                val frame = File(frameDir, "scene-" + index.toString().padStart(4, '0') + ".jpg")
+                val blackFrame = File(frameDir, "scene-" + index.toString().padStart(4, '0') + ".jpg")
+                val visualSource: File?
+                val inputImage: File
                 if (scene.isBlackFrame) {
-                    SceneFrameFactory.createBlack(frame, preferences.aspectRatio)
+                    SceneFrameFactory.createBlack(blackFrame, preferences.aspectRatio)
+                    visualSource = null
+                    inputImage = blackFrame
                 } else {
                     val path = requireNotNull(scene.visualPath) {
                         "PDF visual is missing for scene " + index
@@ -68,7 +74,10 @@ class VideoRenderer(private val context: Context) {
                     require(source.exists() && source.isFile && source.length() > 0L) {
                         "PDF visual is missing or empty: " + path
                     }
-                    SceneFrameFactory.create(source, frame, preferences.aspectRatio)
+                    // Keep the original extracted panel dimensions. Fitting a tall
+                    // panel into a fixed-size JPEG here loses its scrollable extent.
+                    visualSource = source
+                    inputImage = source
                 }
 
                 onProgress(
@@ -77,25 +86,22 @@ class VideoRenderer(private val context: Context) {
 
                 val durationMs = scene.durationMs.coerceAtLeast(34L)
                 val item = MediaItem.Builder()
-                    .setUri(android.net.Uri.fromFile(frame))
+                    .setUri(android.net.Uri.fromFile(inputImage))
                     .setImageDurationMs(durationMs)
                     .build()
 
                 // Only the exact "Manhwa Talks 007" marker in the panel's
-                // upper-left area selects 50% zoom. Ordinary text elsewhere
-                // must not trigger it; every other panel uses 20% zoom.
-                val hasMarker = if (scene.isBlackFrame) {
-                    false
-                } else {
-                    val source = requireNotNull(scene.visualPath).let(::File)
-                    specialPanelScrollDetector.containsTargetText(source) ||
-                        specialPanelScrollDetector.containsTargetText(frame)
-                }
+                // upper-left area selects 50% extra zoom. Ordinary text elsewhere
+                // must not trigger it; every other panel uses 20% extra zoom.
+                val hasMarker = visualSource?.let {
+                    specialPanelScrollDetector.containsTargetText(it)
+                } ?: false
                 val zoom = if (hasMarker) 1.5f else 1.2f
                 val effects = Effects(
                     emptyList(),
                     listOf(buildFixedZoomScroll(
                         durationMs,
+                        preferences.aspectRatio.width,
                         preferences.aspectRatio.height,
                         zoom
                     ))
@@ -140,35 +146,60 @@ class VideoRenderer(private val context: Context) {
     }
 
     /**
-     * Start at the selected zoom immediately, aligned to the top of the
-     * panel, then smoothly scroll through the panel over its full timestamp
-     * duration. Travel exactly the available overflow so no black edge is
-     * exposed. The image moves upward as the viewer reads downward.
+     * Map the original panel into the requested output geometry without
+     * flattening it into a pre-sized frame. The panel starts top-aligned at a
+     * constant zoom; a linear translation carries its lower edge to the
+     * viewport over exactly this scene's timestamp duration.
+     *
+     * MatrixTransformation coordinates are normalized device coordinates
+     * (-1..1), not pixels. Pixel translations send the image out of view.
      */
     private fun buildFixedZoomScroll(
         durationMs: Long,
-        frameHeight: Int,
-        scale: Float
+        outputWidth: Int,
+        outputHeight: Int,
+        zoom: Float
     ): MatrixTransformation {
         val durationUs = (durationMs * 1000L).coerceAtLeast(1L)
         val firstPresentationTimeUs = AtomicLong(Long.MIN_VALUE)
 
-        return MatrixTransformation { presentationTimeUs ->
-            val first = firstPresentationTimeUs.updateAndGet { current ->
-                if (current == Long.MIN_VALUE) presentationTimeUs else current
-            }
-            val localTimeUs = (presentationTimeUs - first).coerceIn(0L, durationUs)
-            val progress = localTimeUs.toDouble() / durationUs.toDouble()
-            val eased = (progress * progress * (3.0 - 2.0 * progress)).toFloat()
-            // The scaled image starts aligned to the top (translation 0).
-            // Move it up by only the extra scaled height, spread over the whole
-            // timestamp duration. This prevents blank/black edges and avoids
-            // the old fixed 12%-of-frame travel that barely covered the panel.
-            val verticalTranslation = -frameHeight * (scale - 1f).coerceAtLeast(0f) * eased
+        return object : MatrixTransformation {
+            @Volatile
+            private var scaleX = zoom
 
-            Matrix().apply {
-                setScale(scale, scale)
-                postTranslate(0f, verticalTranslation)
+            @Volatile
+            private var scaleY = zoom
+
+            override fun configure(inputWidth: Int, inputHeight: Int): Size {
+                val inputAspect = inputWidth.toFloat() / inputHeight.coerceAtLeast(1)
+                val outputAspect = outputWidth.toFloat() / outputHeight.coerceAtLeast(1)
+                // Cover the output without stretching or leaving bars. For a
+                // tall panel scaleY contains its full height; for a wide panel
+                // scaleX contains its horizontal overflow.
+                scaleX = max(1f, inputAspect / outputAspect) * zoom
+                scaleY = max(1f, outputAspect / inputAspect) * zoom
+                return Size(outputWidth, outputHeight)
+            }
+
+            override fun getMatrix(presentationTimeUs: Long): Matrix {
+                val first = firstPresentationTimeUs.updateAndGet { current ->
+                    if (current == Long.MIN_VALUE) presentationTimeUs else current
+                }
+                val localTimeUs = (presentationTimeUs - first).coerceIn(0L, durationUs)
+                val progress = (localTimeUs.toDouble() / durationUs.toDouble())
+                    .coerceIn(0.0, 1.0).toFloat()
+
+                // Translation is exactly the normalized overflow: top aligned
+                // at the start, bottom aligned at the end. Linear timing makes
+                // 3-second panels move faster than 20-second panels and avoids
+                // easing spikes. The image moves upward as the viewer reads down.
+                val overflow = (scaleY - 1f).coerceAtLeast(0f)
+                val translationY = overflow * (2f * progress - 1f)
+
+                return Matrix().apply {
+                    setScale(scaleX, scaleY)
+                    postTranslate(0f, translationY)
+                }
             }
         }
     }

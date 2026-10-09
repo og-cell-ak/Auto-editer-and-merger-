@@ -66,11 +66,14 @@ class TimestampPipelineTest {
         assertEquals(2500L, visible[1].startMs)
         assertEquals(6000L, visible[2].startMs)
         assertEquals(10_000L, result.scenes.last().endMs)
+        assertEquals(2500L, visible[0].endMs - visible[0].startMs)
+        assertEquals(3500L, visible[1].endMs - visible[1].startMs)
+        assertEquals(4000L, visible[2].endMs - visible[2].startMs)
         assertTrue(visible.all { !it.isBlackFrame })
     }
 
     @Test
-    fun explicitRangesProduceBlackOnlyOutsideScheduledVisuals() {
+    fun timestampIntervalsDrivePanelDurationsWithoutBlankGaps() {
         val markers = TimestampScriptParser().parse(
             """
             [00:01]-[00:02] First
@@ -89,19 +92,39 @@ class TimestampPipelineTest {
             AppPreferences()
         ).scenes
 
-        assertEquals(4, scenes.size)
-        assertTrue(!scenes[0].isBlackFrame)
-        assertTrue(scenes[1].isBlackFrame)
-        assertTrue(!scenes[2].isBlackFrame)
-        assertTrue(scenes[3].isBlackFrame)
-
-        // The first visual starts at video time zero instead of a black lead-in.
+        assertEquals(2, scenes.size)
+        assertTrue(scenes.all { !it.isBlackFrame })
+        // Rebase the first timestamp to zero but preserve the 2-second interval
+        // between timestamp starts. Keep the final panel on screen to audio end.
         assertEquals(0L, scenes[0].startMs)
         assertEquals(2000L, scenes[0].endMs)
         assertEquals(2000L, scenes[1].startMs)
-        assertEquals(3000L, scenes[1].endMs)
-        assertEquals(3000L, scenes[2].startMs)
-        assertEquals(4000L, scenes[2].endMs)
-        assertEquals(5000L, scenes[3].endMs)
+        assertEquals(5000L, scenes[1].endMs)
+    }
+
+    @Test
+    fun timestampStartIntervalsOfThreeAndTwentySecondsArePreserved() {
+        val markers = TimestampScriptParser().parse(
+            """
+            [00:03] First
+            [00:06] Second
+            [00:26] Third
+            """.trimIndent()
+        )
+        val scenes = TimestampScenePlanner().plan(
+            markers,
+            listOf("/tmp/one.jpg", "/tmp/two.jpg", "/tmp/three.jpg"),
+            30_000L,
+            AppPreferences()
+        ).scenes
+
+        assertEquals(3, scenes.size)
+        assertEquals(0L, scenes[0].startMs)
+        assertEquals(3000L, scenes[0].endMs)
+        assertEquals(3000L, scenes[1].startMs)
+        assertEquals(23_000L, scenes[1].endMs)
+        assertEquals(23_000L, scenes[2].startMs)
+        assertEquals(30_000L, scenes[2].endMs)
+        assertTrue(scenes.all { !it.isBlackFrame })
     }
 }

@@ -115,12 +115,17 @@ assert "buildsubtlepan" not in renderer_lower
 assert "buildfixedzoomscroll" in renderer_lower
 assert "val zoom = if (hasmarker) 1.5f else 1.2f" in renderer_lower
 assert "containsanytext(frame)" not in renderer_lower
-assert "frameheight * (scale - 1f)" in renderer_lower
-assert "setscale(scale, scale)" in renderer_lower
+assert "override fun configure(inputwidth: int, inputheight: int): size" in renderer_lower
+assert "return size(outputwidth, outputheight)" in renderer_lower
+assert "max(1f, inputaspect / outputaspect) * zoom" in renderer_lower
+assert "max(1f, outputaspect / inputaspect) * zoom" in renderer_lower
+assert "val translationy = overflow * (2f * progress - 1f)" in renderer_lower
+assert "eased" not in renderer_lower
+assert "setscale(scalex, scaley)" in renderer_lower
+assert "android.net.uri.fromfile(inputimage)" in renderer_lower
 assert "specialpanelscrolldetector" in renderer_lower
 assert "containstargettext" in renderer_lower
 assert "manhwa talks 007" in all_source.lower()
-assert "setscale(scale, scale)" in renderer_lower
 assert "verticaltranslation" in renderer_lower
 assert "max_mismatch_ms = 5000l" in planner.lower()
 assert "timestamps must be strictly increasing" in (java_root / "com/futurethinking/aivideodirector/pipeline/TimestampScriptParser.kt").read_text().lower()

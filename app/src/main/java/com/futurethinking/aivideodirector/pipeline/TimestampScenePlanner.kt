@@ -32,72 +32,59 @@ class TimestampScenePlanner {
         val frameTolerance = (1000.0 / fps / 2.0).roundToLong().coerceAtLeast(1L)
         val scenes = mutableListOf<ScenePlan>()
         val diagnostics = mutableListOf<String>()
-        var cursor = 0L
-
-        fun addBlack(start: Long, end: Long) {
-            if (end <= start) return
-            scenes += ScenePlan(
-                id = scenes.size,
-                startMs = start,
-                endMs = end,
-                narrationText = "",
-                visualPath = null,
-                pdfOrdinal = null,
-                requestedStartMs = start,
-                requestedEndMs = end,
-                isBlackFrame = true,
-                reason = "no_pdf_visual_scheduled",
-                motionDirection = null
-            )
-        }
-
         var visualSceneIndex = 0
+        // The first timestamp establishes the script origin. Align its panel
+        // to video zero and subtract this origin from every later timestamp so
+        // the original intervals (3 seconds, 20 seconds, etc.) stay unchanged.
+        val timestampOriginMs = markers.first().startMs
 
         markers.forEachIndexed { index, marker ->
-            if (marker.startMs >= audioDurationMs) {
-                val delta = marker.startMs - audioDurationMs
+            val relativeStartMs = (marker.startMs - timestampOriginMs).coerceAtLeast(0L)
+            if (relativeStartMs >= audioDurationMs) {
+                val delta = relativeStartMs - audioDurationMs
                 if (delta <= MAX_MISMATCH_MS && index == markers.lastIndex) {
-                    diagnostics += "Timestamp " + formatMs(marker.startMs) + " is " + formatMs(delta) + " beyond audio. Corrected by ignoring the final out-of-range marker."
+                    diagnostics += "Timestamp " + formatMs(marker.startMs) + " is " +
+                        formatMs(delta) + " beyond the usable timeline. Ignored the final out-of-range marker."
                     return@forEachIndexed
                 }
                 require(delta <= MAX_MISMATCH_MS) {
-                    "Timestamp " + formatMs(marker.startMs) + " is " + formatMs(delta) + " beyond audio. This exceeds the allowed 5 second correction window."
+                    "Timestamp " + formatMs(marker.startMs) + " is " +
+                        formatMs(delta) + " beyond the usable timeline. This exceeds the allowed 5 second correction window."
                 }
+                require(index == markers.lastIndex) {
+                    "A timestamp after the usable audio timeline cannot be rendered."
+                }
+                return@forEachIndexed
             }
 
-            // A timestamp at the start of the script describes the first visual,
-            // not an instruction to render a black lead-in. Start the first panel
-            // at video time zero while preserving all later timestamp boundaries.
             val start = if (index == 0) 0L
-                else snapToFrame(marker.startMs, fps).coerceIn(0L, audioDurationMs)
-            require(index == 0 || abs(start - marker.startMs) <= frameTolerance + 1L) {
+                else snapToFrame(relativeStartMs, fps).coerceIn(0L, audioDurationMs)
+            require(index == 0 || abs(start - relativeStartMs) <= frameTolerance + 1L) {
                 "Timestamp quantization exceeded frame tolerance at " + formatMs(marker.startMs) + "."
             }
 
-            val nextStart = markers.getOrNull(index + 1)?.startMs?.let { snapToFrame(it, fps) }
-            val explicitEnd = marker.explicitEndMs
-            val requestedEnd = explicitEnd ?: nextStart ?: audioDurationMs
-            require(requestedEnd > marker.startMs) {
-                "Timestamp duration is empty near " + marker.raw
-            }
+            // Timestamp starts define visual changes. The current panel remains
+            // visible until the next timestamp; the final panel remains visible
+            // to the audio end. Never inject black placeholders between panels.
+            val nextRelativeStart = markers.getOrNull(index + 1)?.startMs
+                ?.minus(timestampOriginMs)
+                ?.let { snapToFrame(it, fps) }
+            val requestedEnd = nextRelativeStart ?: audioDurationMs
             if (requestedEnd > audioDurationMs) {
                 val delta = requestedEnd - audioDurationMs
                 require(delta <= MAX_MISMATCH_MS) {
-                    "Timestamp end " + formatMs(requestedEnd) + " is " + formatMs(delta) + " beyond audio. This exceeds the allowed 5 second correction window."
+                    "Timestamp end " + formatMs(requestedEnd) + " is " + formatMs(delta) +
+                        " beyond audio. This exceeds the allowed 5 second correction window."
                 }
-                diagnostics += "Timestamp end " + formatMs(requestedEnd) + " exceeds audio by " + formatMs(delta) + ". Corrected to audio end " + formatMs(audioDurationMs) + "."
-            } else if (requestedEnd < audioDurationMs && index == markers.lastIndex && explicitEnd == null) {
-                val delta = audioDurationMs - requestedEnd
-                if (delta <= MAX_MISMATCH_MS) diagnostics += "Timestamp timeline ends " + formatMs(delta) + " before audio. Corrected by padding the final " + formatMs(delta) + " with the timeline audio."
+                diagnostics += "Timestamp " + formatMs(requestedEnd) + " exceeds audio by " +
+                    formatMs(delta) + ". Corrected to audio end " + formatMs(audioDurationMs) + "."
             }
 
             val end = snapToFrame(requestedEnd, fps).coerceIn(0L, audioDurationMs)
             require(end > start) {
                 "Timestamp " + formatMs(marker.startMs) +
-                    " is too close for " + fps + " fps rendering."
+                    " leaves no visible duration at " + fps + " fps rendering."
             }
-
-            if (start > cursor) addBlack(cursor, start)
 
             val direction = when (visualSceneIndex % 4) {
                 0 -> Enums.MotionDirection.LEFT_TO_RIGHT
@@ -114,27 +101,12 @@ class TimestampScenePlanner {
                 visualPath = orderedPdfVisuals[index],
                 pdfOrdinal = index + 1,
                 requestedStartMs = marker.startMs,
-                requestedEndMs = explicitEnd,
+                requestedEndMs = marker.explicitEndMs,
                 isBlackFrame = false,
-                reason = "timestamp_sequence_pdf_order_subtle_pan",
+                reason = "timestamp_interval_panel_scroll",
                 motionDirection = direction
             )
             visualSceneIndex++
-            cursor = end
-
-            val nextAbsolute = markers.getOrNull(index + 1)?.startMs?.let { snapToFrame(it, fps) }
-            if (explicitEnd != null && nextAbsolute != null && end < nextAbsolute) {
-                addBlack(end, nextAbsolute)
-                cursor = nextAbsolute
-            }
-            if (index == markers.lastIndex && explicitEnd != null && end < audioDurationMs) {
-                addBlack(end, audioDurationMs)
-                cursor = audioDurationMs
-            }
-        }
-
-        if (scenes.first().startMs > 0L) {
-            addBlack(0L, scenes.first().startMs)
         }
 
         val normalized = scenes.sortedBy { it.startMs }.mapIndexed { idx, scene ->
