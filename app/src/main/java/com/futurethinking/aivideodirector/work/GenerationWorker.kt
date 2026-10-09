@@ -1,6 +1,8 @@
 package com.futurethinking.aivideodirector.work
 
 import android.app.*
+import android.content.ContentValues
+import android.provider.MediaStore
 import android.os.*
 import androidx.core.app.NotificationCompat
 import androidx.work.*
@@ -146,7 +148,10 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
    require(QualityControl.inspectRenderedFile(out,audio,true)==null){
     "output_validation_failed. See analysis report for timeline/audio details."
    }
-   p.outputPath=out.absolutePath;p.state="READY";p.progress=100;p.progressStage="Video ready";store.save(p)
+   p.progressStage="Saving video to Movies/EDITOR"
+   store.save(p)
+   saveToPhoneMovies(out, p.title, p.id)
+   p.outputPath=out.absolutePath;p.state="READY";p.progress=100;p.progressStage="Video ready • saved to Movies/EDITOR";store.save(p)
    stage(100,"Video ready")
    Result.success()
   }catch(t:Throwable){
@@ -164,6 +169,50 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
    p.lastError=t.message?:t.javaClass.simpleName
    store.save(p)
    Result.success(workDataOf(KEY_RESULT_STATE to "ERROR",KEY_ERROR to (p.lastError?:"generation_failed")))
+  }
+ }
+
+ private fun saveToPhoneMovies(source: File, title: String, projectId: String) {
+  val safeTitle = title.replace(Regex("[^A-Za-z0-9._-]+"), "_").trim('_').ifBlank { "EDITOR_Video" }
+  val uniqueName = safeTitle.take(48) + "_" + projectId.take(8) + ".mp4"
+
+  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+   val values = ContentValues().apply {
+    put(MediaStore.MediaColumns.DISPLAY_NAME, uniqueName)
+    put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
+    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/EDITOR")
+    put(MediaStore.MediaColumns.IS_PENDING, 1)
+   }
+   val uri = applicationContext.contentResolver.insert(
+    MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values
+   ) ?: error("Could not create Movies/EDITOR media entry")
+   try {
+    val stream = applicationContext.contentResolver.openOutputStream(uri, "w")
+     ?: error("Could not open Movies/EDITOR output stream")
+    stream.use { output ->
+     source.inputStream().use { input -> input.copyTo(output, 1024 * 1024) }
+    }
+    require(applicationContext.contentResolver.update(
+     uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
+     null, null
+    ) > 0) { "Could not finalize video in Movies/EDITOR" }
+   } catch (t: Throwable) {
+    runCatching { applicationContext.contentResolver.delete(uri, null, null) }
+    throw t
+   }
+  } else {
+   // On Android 7–9, save in the app's external Movies directory without
+   // requiring a new runtime permission prompt.
+   val base = applicationContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
+    ?: applicationContext.filesDir
+   val directory = File(base, "EDITOR").apply { mkdirs() }
+   val destination = File(directory, uniqueName)
+   source.inputStream().use { input ->
+    destination.outputStream().use { output -> input.copyTo(output, 1024 * 1024) }
+   }
+   require(destination.exists() && destination.length() == source.length()) {
+    "Could not verify saved video in phone storage"
+   }
   }
  }
 
@@ -215,7 +264,7 @@ class GenerationWorker(appContext:android.content.Context,params:WorkerParameter
     .createNotificationChannel(NotificationChannel(id,"Video generation",NotificationManager.IMPORTANCE_LOW))
   }
   val no=NotificationCompat.Builder(applicationContext,id)
-   .setContentTitle("Editor and Merger")
+   .setContentTitle("EDITOR")
    .setContentText(text)
    .setSmallIcon(android.R.drawable.ic_media_play)
    .setOnlyAlertOnce(true).setOngoing(true)

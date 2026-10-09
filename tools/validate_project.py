@@ -79,7 +79,7 @@ assert "append_or_replace" in vm
 assert "queue_version" in vm
 assert "key_result_state" in worker
 assert 'key_result_state to "error"' in worker
-assert 'android:label="editor and merger"' in manifest
+assert 'android:label="editor"' in manifest
 
 # Merge stability: use Media3 Transformer only. No raw MediaMuxer shortcut.
 # The rendering app must not contain an active merger UI or merger worker.
@@ -91,6 +91,9 @@ assert "mergeselection" not in vm
 assert "mergeitemsjson" in store  # legacy data remains parseable, but is not executable behavior.
 assert "mediaexportgate.withlock" in renderer.lower()
 assert "setforeground(foreground" in worker
+assert "savetophonemovies" in worker
+assert "mediastore.video.media.external_content_uri" in worker
+assert "movies/editor" in worker
 assert "result.retry()" in worker
 
 print("VALIDATION_OK")
@@ -110,6 +113,10 @@ assert "r >= 170" in extractor.lower() and "g >= 125" in extractor.lower() and "
 assert "scaledsize(page.width, page.height, 1920)" in extractor.lower()
 assert "buildsubtlepan" not in renderer_lower
 assert "buildmanhwascroll" in renderer_lower
+assert "buildtextlesspanelzoomscroll" in renderer_lower
+assert "setscale(scale, scale)" in renderer_lower
+assert "1.2f + (0.3f * eased)" in renderer_lower
+assert "containsanytext" in renderer_lower
 assert "specialpanelscrolldetector" in renderer_lower
 assert "containstargettext" in renderer_lower
 assert "manhwa talks 007" in all_source.lower()
